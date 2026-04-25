@@ -228,10 +228,10 @@ Math.E utiliza **elevación suave de plataforma educativa** con tarjetas de resu
 
 ### Prompt Template
 ```text
-Diseña esto como la plataforma educativa Math.E del Colegio Claretiano:
-- base de plataforma educativa blanca y azul suave
-- sistema de navegación y CTA en azul Math.E fuerte
-- tarjetas de resultado VAK, flujo de cuestionario y jerarquía educativa clara
-- confianza institucional más claridad orientada al diagnóstico de estilo de aprendizaje
-- UX de plataforma educativa estructurada, accesible y altamente legible
+Diseña esto siguiendo el estilo del sitio web público actual de Coursera:
+- una base de mercado de aprendizaje en línea en tonos blancos y azul claro
+- un sistema de navegación y llamadas a la acción (CTA) en el característico azul de Coursera
+- fichas de programas, logotipos de socios y navegación por categorías con una jerarquía educativa clara
+- confianza académica y elementos de conversión orientados a la carrera profesional
+- una experiencia de usuario (UX) de la plataforma de aprendizaje estructurada, convencional y muy legible
 ```
