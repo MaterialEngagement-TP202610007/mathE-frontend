@@ -1,0 +1,337 @@
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes play-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/* Fade with directional slide */
+@keyframes fade-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--animate-translate-x, var(--animate-distance-sm))));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(var(--animate-translate-x, var(--animate-distance-sm)));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--animate-translate-y, var(--animate-distance-sm)));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--animate-translate-y, var(--animate-distance-sm))));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--animate-translate-x, var(--animate-distance-sm))));
+  }
+}
+
+@keyframes fade-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(var(--animate-translate-x, var(--animate-distance-sm)));
+  }
+}
+
+@keyframes fade-out-up {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--animate-translate-y, var(--animate-distance-sm))));
+  }
+}
+
+@keyframes fade-out-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(var(--animate-translate-y, var(--animate-distance-sm)));
+  }
+}
+
+/* ========================================
+   FADE ANIMATION UTILITIES
+   ======================================== */
+
+/* Basic fade animations */
+@utility animate-fade-in {
+  opacity: 0;
+  animation: fade-in var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-xs)) forwards;
+}
+
+@utility animate-fade-out {
+  animation: fade-out var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-none)) forwards;
+}
+
+/* Fade with directional slide - IN */
+@utility animate-fade-in-left {
+  opacity: 0;
+  animation: fade-in-left var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-xs)) forwards;
+}
+
+@utility animate-fade-in-right {
+  opacity: 0;
+  animation: fade-in-right var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-xs)) forwards;
+}
+
+@utility animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-xs)) forwards;
+}
+
+@utility animate-fade-in-down {
+  opacity: 0;
+  animation: fade-in-down var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-xs)) forwards;
+}
+
+/* Fade with directional slide - OUT */
+@utility animate-fade-out-left {
+  animation: fade-out-left var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-none)) forwards;
+}
+
+@utility animate-fade-out-right {
+  animation: fade-out-right var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-none)) forwards;
+}
+
+@utility animate-fade-out-up {
+  animation: fade-out-up var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-none)) forwards;
+}
+
+@utility animate-fade-out-down {
+  animation: fade-out-down var(--animate-duration, var(--animate-duration-normal)) ease-out var(--animate-delay, var(--animate-delay-none)) forwards;
+}
+
+/* ========================================
+   ANIMATION DURATION MODIFIERS
+   Customize animation speed
+   ======================================== */
+
+@utility animate-duration-fast {
+  --animate-duration: var(--animate-duration-fast);
+}
+
+@utility animate-duration-normal {
+  --animate-duration: var(--animate-duration-normal);
+}
+
+@utility animate-duration-slow {
+  --animate-duration: var(--animate-duration-slow);
+}
+
+@utility animate-duration-slower {
+  --animate-duration: var(--animate-duration-slower);
+}
+
+/* ========================================
+   ANIMATION DELAY MODIFIERS
+   Control when animations start
+   ======================================== */
+
+@utility animate-delay-none {
+  --animate-delay: var(--animate-delay-none);
+}
+
+@utility animate-delay-xs {
+  --animate-delay: var(--animate-delay-xs);
+}
+
+@utility animate-delay-sm {
+  --animate-delay: var(--animate-delay-sm);
+}
+
+@utility animate-delay-md {
+  --animate-delay: var(--animate-delay-md);
+}
+
+@utility animate-delay-lg {
+  --animate-delay: var(--animate-delay-lg);
+}
+
+@utility animate-delay-xl {
+  --animate-delay: var(--animate-delay-xl);
+}
+
+/* Specific delay values (100ms increments) */
+@utility animate-delay-100 {
+  --animate-delay: 100ms;
+}
+
+@utility animate-delay-200 {
+  --animate-delay: 200ms;
+}
+
+@utility animate-delay-300 {
+  --animate-delay: 300ms;
+}
+
+@utility animate-delay-400 {
+  --animate-delay: 400ms;
+}
+
+@utility animate-delay-500 {
+  --animate-delay: 500ms;
+}
+
+@utility animate-delay-600 {
+  --animate-delay: 600ms;
+}
+
+@utility animate-delay-700 {
+  --animate-delay: 700ms;
+}
+
+@utility animate-delay-800 {
+  --animate-delay: 800ms;
+}
+
+@utility animate-delay-900 {
+  --animate-delay: 900ms;
+}
+
+@utility animate-delay-1000 {
+  --animate-delay: 1000ms;
+}
+
+/* ========================================
+   TRANSLATE DISTANCE MODIFIERS
+   Customize slide distance for directional fades
+   ======================================== */
+
+/* Both axes */
+
+@utility animate-distance-xs {
+  --animate-translate-x: var(--animate-distance-xs);
+  --animate-translate-y: var(--animate-distance-xs);
+}
+
+@utility animate-distance-sm {
+  --animate-translate-x: var(--animate-distance-sm);
+  --animate-translate-y: var(--animate-distance-sm);
+}
+
+@utility animate-distance-md {
+  --animate-translate-x: var(--animate-distance-md);
+  --animate-translate-y: var(--animate-distance-md);
+}
+
+@utility animate-distance-lg {
+  --animate-translate-x: var(--animate-distance-lg);
+  --animate-translate-y: var(--animate-distance-lg);
+}
+
+@utility animate-distance-xl {
+  --animate-translate-x: var(--animate-distance-xl);
+  --animate-translate-y: var(--animate-distance-xl);
+}
+
+/* X-axis only */
+@utility animate-distance-x-sm {
+  --animate-translate-x: var(--animate-distance-sm);
+}
+
+@utility animate-distance-x-md {
+  --animate-translate-x: var(--animate-distance-md);
+}
+
+@utility animate-distance-x-lg {
+  --animate-translate-x: var(--animate-distance-lg);
+}
+
+@utility animate-distance-x-xl {
+  --animate-translate-x: var(--animate-distance-xl);
+}
+
+/* Y-axis only */
+@utility animate-distance-y-sm {
+  --animate-translate-y: var(--animate-distance-sm);
+}
+
+@utility animate-distance-y-md {
+  --animate-translate-y: var(--animate-distance-md);
+}
+
+@utility animate-distance-y-lg {
+  --animate-translate-y: var(--animate-distance-lg);
+}
+
+@utility animate-distance-y-xl {
+  --animate-translate-y: var(--animate-distance-xl);
+}

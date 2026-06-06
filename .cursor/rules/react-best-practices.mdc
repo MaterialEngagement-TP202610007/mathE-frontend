@@ -1,0 +1,294 @@
+---
+description: Guías de optimización de rendimiento para React. Aplicar al escribir, revisar o refactorizar componentes React, páginas, data fetching, optimización de bundle o mejoras de rendimiento.
+globs: ["**/*.tsx", "**/*.ts", "**/*.jsx", "**/*.js"]
+alwaysApply: true
+---
+
+# React Best Practices — Vercel Engineering
+
+Guía de optimización de rendimiento para React, con 70+ reglas en 8 categorías.
+
+## 1. Eliminar Waterfalls (CRÍTICO)
+
+### Promise.all() para operaciones independientes
+```typescript
+// ❌ 3 round trips
+const user = await fetchUser()
+const posts = await fetchPosts()
+const comments = await fetchComments()
+
+// ✅ 1 round trip
+const [user, posts, comments] = await Promise.all([
+  fetchUser(), fetchPosts(), fetchComments()
+])
+```
+
+### Defer await hasta que sea necesario
+```typescript
+// ❌ siempre espera userData aunque no se use
+async function handle(userId: string, skip: boolean) {
+  const userData = await fetchUserData(userId)
+  if (skip) return { skipped: true }
+  return processUserData(userData)
+}
+
+// ✅ solo espera cuando es necesario
+async function handle(userId: string, skip: boolean) {
+  if (skip) return { skipped: true }
+  const userData = await fetchUserData(userId)
+  return processUserData(userData)
+}
+```
+
+### Suspense Boundaries estratégicos
+```tsx
+// ✅ El layout se muestra inmediatamente, los datos llegan en streaming
+function Page() {
+  return (
+    <div>
+      <Sidebar />
+      <Suspense fallback={<Skeleton />}>
+        <DataDisplay />
+      </Suspense>
+    </div>
+  )
+}
+```
+
+## 2. Optimización de Bundle (CRÍTICO)
+
+### Evitar imports de barrel files
+```tsx
+// ❌ carga toda la librería (~2.8s extra)
+import { Check, X, Menu } from 'lucide-react'
+
+// ✅ Next.js 13.5+ maneja esto automáticamente con optimizePackageImports
+```
+
+### Dynamic imports para componentes pesados
+```tsx
+import dynamic from 'next/dynamic'
+
+const MonacoEditor = dynamic(
+  () => import('./monaco-editor').then(m => m.MonacoEditor),
+  { ssr: false }
+)
+```
+
+### Precargar basado en intención del usuario
+```tsx
+function EditorButton({ onClick }: { onClick: () => void }) {
+  const preload = () => {
+    if (typeof window !== 'undefined') void import('./monaco-editor')
+  }
+  return <button onMouseEnter={preload} onFocus={preload} onClick={onClick}>Open</button>
+}
+```
+
+## 3. Rendimiento del Lado del Servidor (ALTO)
+
+### Siempre autenticar Server Actions
+```typescript
+'use server'
+export async function deleteUser(userId: string) {
+  const session = await verifySession() // ✅ siempre verificar auth dentro de la acción
+  if (!session) throw new Error('Unauthorized')
+  await db.user.delete({ where: { id: userId } })
+}
+```
+
+### Composición de componentes para data fetching paralelo
+```tsx
+// ✅ Header y Sidebar fetchean simultáneamente
+async function Header() { const data = await fetchHeader(); return <div>{data}</div> }
+async function Sidebar() { const items = await fetchSidebarItems(); return <nav>...</nav> }
+export default function Page() {
+  return <div><Header /><Sidebar /></div>
+}
+```
+
+## 4. Re-render Optimization (MEDIO)
+
+### Estado derivado durante el render
+```tsx
+// ❌ estado redundante + efecto
+const [firstName] = useState('First')
+const [lastName] = useState('Last')
+const [fullName, setFullName] = useState('')
+useEffect(() => { setFullName(firstName + ' ' + lastName) }, [firstName, lastName])
+
+// ✅ derivar durante el render
+const fullName = firstName + ' ' + lastName
+```
+
+### No definir componentes dentro de componentes
+```tsx
+// ❌ remonta en cada render — pierde estado, corre effects de nuevo
+function UserProfile({ user, theme }) {
+  const Avatar = () => <img src={user.avatarUrl} className={theme} />
+  return <Avatar />
+}
+
+// ✅ pasar props en su lugar
+function Avatar({ src, theme }: { src: string; theme: string }) {
+  return <img src={src} className={theme} />
+}
+```
+
+### setState funcional para evitar stale closures
+```tsx
+// ❌ recreado en cada cambio de items
+const addItems = useCallback((newItems) => {
+  setItems([...items, ...newItems])
+}, [items])
+
+// ✅ callback estable, sin stale closures
+const addItems = useCallback((newItems) => {
+  setItems(curr => [...curr, ...newItems])
+}, [])
+```
+
+### Lazy state initialization
+```tsx
+// ❌ JSON.parse corre en cada render
+const [settings, setSettings] = useState(
+  JSON.parse(localStorage.getItem('settings') || '{}')
+)
+
+// ✅ solo corre una vez
+const [settings, setSettings] = useState(() => {
+  const stored = localStorage.getItem('settings')
+  return stored ? JSON.parse(stored) : {}
+})
+```
+
+### No envolver expresiones simples con useMemo
+```tsx
+// ❌ innecesario — useMemo cuesta más que la expresión
+const isLoading = useMemo(() => user.isLoading || notif.isLoading, [user.isLoading, notif.isLoading])
+
+// ✅ computar directamente
+const isLoading = user.isLoading || notif.isLoading
+```
+
+### Reducir dependencias de efectos
+```tsx
+// ❌ re-corre en cualquier cambio de user
+useEffect(() => { console.log(user.id) }, [user])
+
+// ✅ re-corre solo cuando id cambia
+useEffect(() => { console.log(user.id) }, [user.id])
+```
+
+## 5. Rendimiento de Rendering (MEDIO)
+
+### Conditional rendering explícito
+```tsx
+// ❌ renderiza "0" cuando count es 0
+{count && <span>{count}</span>}
+
+// ✅ renderiza null cuando count es 0
+{count > 0 ? <span>{count}</span> : null}
+```
+
+### Usar useTransition para estados de carga
+```tsx
+// ✅ estado pending automático, no manual
+const [isPending, startTransition] = useTransition()
+const handleSearch = (value: string) => {
+  startTransition(async () => {
+    const data = await fetchResults(value)
+    setResults(data)
+  })
+}
+```
+
+### Animar wrapper div, no SVG directamente
+```tsx
+// ❌ sin aceleración de hardware
+<svg className="animate-spin">...</svg>
+
+// ✅ acelerado por GPU
+<div className="animate-spin"><svg>...</svg></div>
+```
+
+## 6. Rendimiento JavaScript (BAJO-MEDIO)
+
+### Set/Map para lookups O(1)
+```typescript
+// ❌ O(n) por lookup
+items.filter(item => allowedIds.includes(item.id))
+
+// ✅ O(1) por lookup
+const allowedIds = new Set(['a', 'b', 'c'])
+items.filter(item => allowedIds.has(item.id))
+```
+
+### toSorted() en lugar de sort() para inmutabilidad
+```typescript
+// ❌ muta el array original
+users.sort((a, b) => a.name.localeCompare(b.name))
+
+// ✅ crea nuevo array
+users.toSorted((a, b) => a.name.localeCompare(b.name))
+```
+
+### flatMap para map + filter en un paso
+```typescript
+// ❌ 2 iteraciones, array intermedio
+users.map(u => u.isActive ? u.name : null).filter(Boolean)
+
+// ✅ 1 iteración, sin array intermedio
+users.flatMap(u => u.isActive ? [u.name] : [])
+```
+
+### Index Maps para lookups repetidos
+```typescript
+// ❌ O(n) por orden
+orders.map(order => ({ ...order, user: users.find(u => u.id === order.userId) }))
+
+// ✅ O(1) por orden
+const userById = new Map(users.map(u => [u.id, u]))
+orders.map(order => ({ ...order, user: userById.get(order.userId) }))
+```
+
+## 7. Patrones Avanzados (BAJO)
+
+### Inicializar app una vez, no por mount
+```tsx
+// ✅ guard de módulo — evita doble init en desarrollo
+let didInit = false
+function App() {
+  useEffect(() => {
+    if (didInit) return
+    didInit = true
+    loadFromStorage()
+    checkAuthToken()
+  }, [])
+}
+```
+
+### useEffectEvent para callbacks estables
+```tsx
+import { useEffectEvent } from 'react'
+
+function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
+  const [query, setQuery] = useState('')
+  const onSearchEvent = useEffectEvent(onSearch) // ✅ no en deps
+
+  useEffect(() => {
+    const timeout = setTimeout(() => onSearchEvent(query), 300)
+    return () => clearTimeout(timeout)
+  }, [query]) // ✅ solo query como dependencia
+}
+```
+
+### Lógica de interacción en event handlers
+```tsx
+// ❌ modela evento como state + effect
+const [submitted, setSubmitted] = useState(false)
+useEffect(() => { if (submitted) post('/api/register') }, [submitted])
+
+// ✅ en el handler directamente
+function handleSubmit() { post('/api/register') }
+```

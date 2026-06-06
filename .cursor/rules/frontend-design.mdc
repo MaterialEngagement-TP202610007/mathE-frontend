@@ -1,0 +1,38 @@
+---
+description: Crear interfaces frontend distintivas y de calidad de producción con alto nivel de diseño. Usar cuando el usuario pide construir componentes web, páginas, artefactos o aplicaciones (sitios web, landing pages, dashboards, componentes React, layouts HTML/CSS, o al estilizar cualquier UI web).
+globs: ["**/*.tsx", "**/*.jsx", "**/*.html", "**/*.css"]
+alwaysApply: false
+---
+
+# Frontend Design — Interfaces Distintivas y de Producción
+
+Esta regla guía la creación de interfaces frontend distintivas que evitan estéticas genéricas de IA. Implementa código real y funcional con atención excepcional a los detalles estéticos.
+
+## Pensamiento de Diseño
+
+Antes de codificar, comprende el contexto y comprométete con una dirección estética BOLD:
+- **Propósito**: ¿Qué problema resuelve esta interfaz? ¿Quién la usa?
+- **Tono**: Elige un extremo: minimalismo brutal, caos maximalista, retro-futurista, orgánico/natural, lujo/refinado, lúdico, editorial/magazine, brutalista/raw, art deco/geométrico, suave/pastel, industrial/utilitario, etc.
+- **Diferenciación**: ¿Qué hace esto INOLVIDABLE?
+
+**CRÍTICO**: Elige una dirección conceptual clara y ejecútala con precisión.
+
+## Guías de Estética Frontend
+
+- **Tipografía**: Elige fuentes hermosas y únicas. EVITA fuentes genéricas como Arial, Inter, Roboto, Space Grotesk. Opta por elecciones distintivas. Combina una fuente display con una body refinada.
+- **Color y Tema**: Comprométete con una estética coherente. Usa variables CSS. Colores dominantes con acentos nítidos superan paletas tímidas y distribuidas uniformemente.
+- **Movimiento**: Usa animaciones para efectos y micro-interacciones. Prioriza soluciones CSS. Usa la librería Motion para React. Un buen page load con staggered reveals crea más deleite que micro-interacciones dispersas.
+- **Composición Espacial**: Layouts inesperados. Asimetría. Superposición. Flujo diagonal. Elementos que rompen la cuadrícula. Espacio negativo generoso O densidad controlada.
+- **Fondos y Detalles Visuales**: Crea atmósfera y profundidad. Agrega efectos contextuales: gradient meshes, texturas noise, patrones geométricos, transparencias en capas, sombras dramáticas, bordes decorativos.
+
+**NUNCA** usar: Inter/Roboto/Arial/system fonts, esquemas de color morado-sobre-blanco, layouts predecibles, diseño cookie-cutter sin carácter específico del contexto.
+
+## Reglas de Implementación
+
+- Código funcional y de producción
+- Visualmente impactante y memorable
+- Coherente con un punto de vista estético claro
+- Meticulosamente refinado en cada detalle
+- Varía entre temas claros y oscuros, diferentes fuentes y estéticas
+- El maximalismo necesita código elaborado con animaciones extensas
+- El minimalismo necesita restricción, precisión y atención a espaciado y tipografía

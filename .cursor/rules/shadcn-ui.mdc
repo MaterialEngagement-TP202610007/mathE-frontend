@@ -1,0 +1,130 @@
+---
+description: Gestiona componentes y proyectos shadcn/ui — agregar, buscar, corregir, depurar, estilizar y componer UI. Aplica cuando se trabaja con shadcn/ui, registries de componentes, presets o cualquier proyecto con archivo components.json.
+globs: ["**/*.tsx", "**/*.jsx", "src/components/**"]
+alwaysApply: false
+---
+
+# shadcn/ui — Componentes y Sistemas de Diseño
+
+Framework para construir UI, componentes y sistemas de diseño. Los componentes se agregan como código fuente al proyecto via CLI.
+
+> **IMPORTANTE:** Ejecutar comandos CLI usando el package runner del proyecto: `npx shadcn@latest`, `pnpm dlx shadcn@latest`, o `bunx --bun shadcn@latest`.
+
+## Principios
+
+1. **Usar componentes existentes primero.** Verificar con `npx shadcn@latest search` antes de escribir UI custom.
+2. **Componer, no reinventar.** Settings page = Tabs + Card + form controls. Dashboard = Sidebar + Card + Chart + Table.
+3. **Usar variantes built-in antes de estilos custom.** `variant="outline"`, `size="sm"`, etc.
+4. **Usar colores semánticos.** `bg-primary`, `text-muted-foreground` — nunca valores raw como `bg-blue-500`.
+
+## Reglas Críticas
+
+### Estilos y Tailwind
+- **`className` solo para layout, no styling.** Nunca sobreescribir colores o tipografía del componente.
+- **No usar `space-x-*` o `space-y-*`.** Usar `flex` con `gap-*`. Para stacks verticales, `flex flex-col gap-*`.
+- **Usar `size-*` cuando ancho y alto son iguales.** `size-10` no `w-10 h-10`.
+- **Usar shorthand `truncate`.** No `overflow-hidden text-ellipsis whitespace-nowrap`.
+- **No overrides manuales de `dark:` color.** Usar tokens semánticos (`bg-background`, `text-muted-foreground`).
+- **Usar `cn()` para clases condicionales.** No template literals ternarios manuales.
+- **No `z-index` manual en componentes overlay.** Dialog, Sheet, Popover manejan su propio stacking.
+
+### Formularios e Inputs
+- **Formularios usan `FieldGroup` + `Field`.** Nunca `div` con `space-y-*` o `grid gap-*` para layout de formulario.
+- **`InputGroup` usa `InputGroupInput`/`InputGroupTextarea`.** Nunca `Input`/`Textarea` raw dentro de `InputGroup`.
+- **Sets de opciones (2–7 opciones) usan `ToggleGroup`.** No iterar `Button` con estado activo manual.
+- **Validación usa `data-invalid` + `aria-invalid`.** `data-invalid` en `Field`, `aria-invalid` en el control.
+
+### Estructura de Componentes
+- **Items siempre dentro de su Group.** `SelectItem` → `SelectGroup`. `DropdownMenuItem` → `DropdownMenuGroup`.
+- **Dialog, Sheet y Drawer siempre necesitan un Title.** Requerido para accesibilidad. Usar `className="sr-only"` si visualmente oculto.
+- **Usar composición completa de Card.** `CardHeader`/`CardTitle`/`CardDescription`/`CardContent`/`CardFooter`.
+- **Button no tiene `isPending`/`isLoading`.** Componer con `Spinner` + `data-icon` + `disabled`.
+- **`Avatar` siempre necesita `AvatarFallback`.**
+
+### Usar Componentes, No Markup Custom
+- **Callouts usan `Alert`.** No divs estilizados custom.
+- **Estados vacíos usan `Empty`.** No markup de empty state custom.
+- **Toast via `sonner`.** Usar `toast()` de `sonner`.
+- **Usar `Separator`** en lugar de `<hr>` o `<div className="border-t">`.
+- **Usar `Skeleton`** para loading placeholders. No divs `animate-pulse` custom.
+- **Usar `Badge`** en lugar de spans estilizados custom.
+
+### Íconos
+- **Íconos en `Button` usan `data-icon`.** `data-icon="inline-start"` o `data-icon="inline-end"` en el ícono.
+- **Sin clases de sizing en íconos dentro de componentes.** Los componentes manejan el sizing via CSS.
+- **Pasar íconos como objetos, no strings.** `icon={CheckIcon}`, no un string lookup.
+
+## Patrones Clave
+
+```tsx
+// Layout de formulario: FieldGroup + Field, no div + Label.
+<FieldGroup>
+  <Field>
+    <FieldLabel htmlFor="email">Email</FieldLabel>
+    <Input id="email" />
+  </Field>
+</FieldGroup>
+
+// Validación: data-invalid en Field, aria-invalid en el control.
+<Field data-invalid>
+  <FieldLabel>Email</FieldLabel>
+  <Input aria-invalid />
+  <FieldDescription>Email inválido.</FieldDescription>
+</Field>
+
+// Íconos en botones: data-icon, sin clases de sizing.
+<Button>
+  <SearchIcon data-icon="inline-start" />
+  Buscar
+</Button>
+
+// Espaciado: gap-*, no space-y-*.
+<div className="flex flex-col gap-4">  // correcto
+<div className="space-y-4">           // incorrecto
+
+// Dimensiones iguales: size-*, no w-* h-*.
+<Avatar className="size-10">   // correcto
+<Avatar className="w-10 h-10"> // incorrecto
+```
+
+## Selección de Componentes
+
+| Necesidad | Usar |
+|-----------|------|
+| Botón/acción | `Button` con variante apropiada |
+| Inputs de formulario | `Input`, `Select`, `Combobox`, `Switch`, `Checkbox`, `RadioGroup`, `Textarea` |
+| Alternar entre 2–5 opciones | `ToggleGroup` + `ToggleGroupItem` |
+| Display de datos | `Table`, `Card`, `Badge`, `Avatar` |
+| Navegación | `Sidebar`, `NavigationMenu`, `Breadcrumb`, `Tabs`, `Pagination` |
+| Overlays | `Dialog` (modal), `Sheet` (side panel), `Drawer` (bottom sheet), `AlertDialog` |
+| Feedback | `sonner` (toast), `Alert`, `Progress`, `Skeleton`, `Spinner` |
+| Gráficos | `Chart` (envuelve Recharts) |
+| Layout | `Card`, `Separator`, `Resizable`, `ScrollArea`, `Accordion` |
+| Estados vacíos | `Empty` |
+| Menús | `DropdownMenu`, `ContextMenu`, `Menubar` |
+
+## Flujo de Trabajo
+
+1. Verificar contexto del proyecto — `npx shadcn@latest info`
+2. Revisar componentes instalados antes de ejecutar `add`
+3. Buscar componentes — `npx shadcn@latest search`
+4. Obtener docs y ejemplos — `npx shadcn@latest docs <component>`
+5. Instalar o actualizar — `npx shadcn@latest add`
+6. Revisar archivos agregados — siempre leer y verificar componentes añadidos
+
+## CLI Quick Reference
+
+```bash
+# Agregar componentes
+npx shadcn@latest add button card dialog
+
+# Buscar en registries
+npx shadcn@latest search @shadcn -q "sidebar"
+
+# Obtener docs
+npx shadcn@latest docs button dialog select
+
+# Preview antes de actualizar
+npx shadcn@latest add button --dry-run
+npx shadcn@latest add button --diff button.tsx
+```

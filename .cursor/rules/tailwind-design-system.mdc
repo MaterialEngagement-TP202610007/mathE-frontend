@@ -1,0 +1,132 @@
+---
+description: Construir sistemas de diseño escalables con Tailwind CSS v4, design tokens, librerías de componentes y patrones responsive. Usar cuando se crean librerías de componentes, se implementan sistemas de diseño o se estandarizan patrones de UI.
+globs: ["**/*.css", "**/*.tsx", "**/*.jsx", "tailwind.config.*"]
+alwaysApply: false
+---
+
+# Tailwind Design System (v4)
+
+Construye sistemas de diseño listos para producción con Tailwind CSS v4, incluyendo configuración CSS-first, design tokens, variantes de componentes, patrones responsive y accesibilidad.
+
+> **Nota**: Esta guía apunta a Tailwind CSS v4 (2024+).
+
+## Cambios Clave en v4
+
+| Patrón v3 | Patrón v4 |
+|-----------|-----------|
+| `tailwind.config.ts` | `@theme` en CSS |
+| `@tailwind base/components/utilities` | `@import "tailwindcss"` |
+| `darkMode: "class"` | `@custom-variant dark (&:where(.dark, .dark *))` |
+| `theme.extend.colors` | `@theme { --color-*: value }` |
+| `require("tailwindcss-animate")` | CSS `@keyframes` en `@theme` |
+
+## Configuración Rápida
+
+```css
+/* app.css - Configuración CSS-first de Tailwind v4 */
+@import "tailwindcss";
+
+@theme {
+  /* Tokens de color semánticos usando OKLCH para mejor percepción */
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(14.5% 0.025 264);
+
+  --color-primary: oklch(14.5% 0.025 264);
+  --color-primary-foreground: oklch(98% 0.01 264);
+
+  --color-secondary: oklch(96% 0.01 264);
+  --color-secondary-foreground: oklch(14.5% 0.025 264);
+
+  --color-muted: oklch(96% 0.01 264);
+  --color-muted-foreground: oklch(46% 0.02 264);
+
+  --color-destructive: oklch(53% 0.22 27);
+  --color-destructive-foreground: oklch(98% 0.01 264);
+
+  --color-border: oklch(91% 0.01 264);
+  --color-ring: oklch(14.5% 0.025 264);
+
+  /* Tokens de radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Tokens de animación */
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-slide-in: slide-in 0.3s ease-out;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-in {
+    from { transform: translateY(-0.5rem); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
+
+/* Modo oscuro con @custom-variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-background: oklch(14.5% 0.025 264);
+  --color-foreground: oklch(98% 0.01 264);
+  --color-primary: oklch(98% 0.01 264);
+  --color-primary-foreground: oklch(14.5% 0.025 264);
+  --color-muted: oklch(22% 0.02 264);
+  --color-muted-foreground: oklch(65% 0.02 264);
+  --color-border: oklch(22% 0.02 264);
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; }
+}
+```
+
+## Jerarquía de Design Tokens
+
+```
+Brand Tokens (abstractos)
+    └── Semantic Tokens (propósito)
+        └── Component Tokens (específicos)
+
+Ejemplo:
+    oklch(45% 0.2 260) → --color-primary → bg-primary
+```
+
+## Reglas de Uso
+
+- **Siempre usar tokens semánticos** (`bg-background`, `text-foreground`) sobre valores hardcodeados
+- **Usar OKLCH** para definir colores en el `@theme` — mejor percepción perceptual uniforme
+- **`@theme`** es el único lugar para definir tokens globales
+- **No crear `tailwind.config.ts`** para nuevas extensiones en v4, usar `@theme` en CSS
+- **Variantes de dark mode** con `@custom-variant dark` + clase `.dark` en el elemento raíz
+- **Keyframes dentro de `@theme`** para animaciones reutilizables via `--animate-*`
+
+## Arquitectura de Componentes
+
+```
+Base styles → Variants → Sizes → States → Overrides
+```
+
+Ejemplo de componente con variantes:
+
+```tsx
+// Button con variantes basadas en data attributes o clases
+const buttonVariants = {
+  default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+  outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+  ghost: 'hover:bg-accent hover:text-accent-foreground',
+}
+```
+
+## Patrones Responsive
+
+- Usar los breakpoints built-in: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- Para breakpoints custom, definir en `@theme`: `--breakpoint-3xl: 1920px`
+- Preferir diseño mobile-first (sin prefijo = móvil, prefijos para pantallas más grandes)
