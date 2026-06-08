@@ -1,111 +1,112 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@import "./styles/animations.css";
+@import "./styles/base.css";
+
+/* ============================================================
+   Math.E design tokens — Tailwind v4 @theme
+   Drives utilities: bg-*, text-*, border-*, font-*, tablet:/laptop:/...
+   Brand spec lives in DESIGN.md
+   ============================================================ */
+@theme {
+  /* Responsive breakpoints (src/config/constant.config.ts BREAKPOINTS) */
+  --breakpoint-mobile: 475px;
+  --breakpoint-tablet: 744px;
+  --breakpoint-laptop: 1232px;
+  --breakpoint-desktop: 1440px;
+
+  /* Fonts */
+  --font-sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-crimson: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", Menlo, monospace;
+
+  /* Brand palette */
+  --color-mathe-blue: #0056d2;
+  --color-mathe-blue-deep: #003e9a;
+  --color-mathe-white: #ffffff;
+  --color-mathe-surface: #f5f8ff;
+  --color-mathe-ink: #1f1f1f;
+  --color-mathe-muted: #6b7280;
+  --color-mathe-border: #d9e3f5;
+  --color-mathe-success: #16825d;
+  --color-mathe-warm: #fff0d9;
+
+  --radius-pill: 999px;
+}
+
+/* shadcn/ui semantic tokens mapped onto the Math.E palette */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --radius: 0.75rem;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --background: #ffffff;
+  --foreground: #1f1f1f;
+  --card: #ffffff;
+  --card-foreground: #1f1f1f;
+  --popover: #ffffff;
+  --popover-foreground: #1f1f1f;
+  --primary: #0056d2;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f8ff;
+  --secondary-foreground: #1f1f1f;
+  --muted: #f5f8ff;
+  --muted-foreground: #6b7280;
+  --accent: #f5f8ff;
+  --accent-foreground: #003e9a;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
+  --border: #d9e3f5;
+  --input: #d9e3f5;
+  --ring: #0056d2;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* referenced by src/styles/base.css autofill block */
+  --color-on-surface-background: #ffffff;
+  --text-secondary: #6b7280;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* animation knobs referenced by src/styles/animations.css */
+  --animate-duration-fast: 150ms;
+  --animate-duration-normal: 300ms;
+  --animate-duration-slow: 500ms;
+  --animate-duration-slower: 800ms;
+  --animate-delay-none: 0ms;
+  --animate-delay-xs: 50ms;
+  --animate-delay-sm: 100ms;
+  --animate-delay-md: 200ms;
+  --animate-delay-lg: 300ms;
+  --animate-delay-xl: 500ms;
+  --animate-distance-xs: 4px;
+  --animate-distance-sm: 8px;
+  --animate-distance-md: 16px;
+  --animate-distance-lg: 32px;
+  --animate-distance-xl: 64px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* Bridge the semantic tokens above into Tailwind color utilities */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }

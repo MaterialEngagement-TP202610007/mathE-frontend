@@ -11,20 +11,20 @@
 |------|-------|
 | Base URL (dev) | `http://localhost:3000` |
 | API prefix | `/api` |
-| Auth scheme | JWT Bearer token in `Authorization` header |
+| Auth scheme | JWT in **HttpOnly cookie** `auth_token` (no header, no JS access) |
 | Content type | `application/json` |
 | Swagger / OpenAPI | `http://localhost:3000/api-docs` (interactive) |
 | ID type | All resource ids are **integers** |
 | Date format | ISO 8601 strings in responses (`2026-06-04T12:00:00.000Z`) |
 
-### ⚠️ CORS — backend action required before integration
-The Express server (`src/presentation/server.ts`) currently has **no CORS middleware**. Browser frontends on a different origin (e.g. `http://localhost:5173`) will be blocked. Backend must add `cors` before integration:
+### CORS — enabled with credentials
+The server enables CORS with `credentials: true`, origin from env `CORS_ORIGIN` (default `http://localhost:5173`, comma-separated list supported). The auth cookie only flows if the frontend sends requests with credentials included.
 
-```ts
-import cors from "cors";
-this.app.use(cors({ origin: ["http://localhost:5173"], credentials: false }));
-```
-Until that ships, test against the API with a non-browser client (or a dev proxy). Token is sent in a header (not a cookie), so `credentials` is not needed.
+**Frontend MUST send credentials on every request:**
+- `fetch`: `credentials: "include"`
+- `axios`: `withCredentials: true`
+
+Cookie flags: `HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/`. `Secure` works on `http://localhost` in Chrome/Firefox (localhost is a secure context). For a non-localhost dev host over plain HTTP, the cookie won't be sent — use HTTPS or localhost.
 
 ---
 
@@ -69,25 +69,29 @@ interface PublicUser {
 }
 
 interface LoginResponse {
-  user: PublicUser;
-  token: string;            // JWT — store it, send as Bearer
-}
-
-interface JwtPayload {        // decoded token contents
-  id: number;
-  email: string;
-  roleId: number | null;
+  user: PublicUser;          // token is NOT here — it's set as an HttpOnly cookie
 }
 ```
+
+> The JWT is delivered as the HttpOnly `auth_token` cookie and is **not readable by JavaScript**. The frontend never stores or sends the token manually — the browser attaches the cookie automatically when `credentials: "include"` is set. To know the current user's role, read `user.roleId` from the login response and keep it in app state (or call `GET /api/users/:id`).
 
 ### `POST /api/auth/login`
 Body:
 ```json
 { "email": "user@example.com", "password": "Passw0rd" }
 ```
-- `200` → `LoginResponse`
+- `200` → `LoginResponse` `{ user }` **+** `Set-Cookie: auth_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/`
 - `400` → validation error `{ "error": "Invalid Email" }`
 - `401` → invalid credentials or inactive account
+
+### `POST /api/auth/logout`
+No body. Clears the `auth_token` cookie.
+- `200` → `{ "ok": true }`
+
+### `GET /api/auth/me`
+No body — relies on the cookie. Validates the session (cookie JWT + user still exists & active). **Call this on app load / refresh** to restore auth state, since the token is HttpOnly and unreadable by JS.
+- `200` → `{ user }` (same shape as login)
+- `401` → not logged in / session invalid → route to login
 
 ### `POST /api/auth/register`
 Body:
@@ -110,10 +114,9 @@ Body:
 **Phone rule:** E.164-ish `+?[1-9]\d{1,14}`.
 
 ### Sending the token
-```
-Authorization: Bearer <token>
-```
-On any `401` from a protected route, clear the stored token and redirect to login. Decode the JWT client-side (no verification needed) to read `roleId` for routing/guards, but **never trust it for security** — the server re-checks.
+Nothing to do manually — the browser sends the `auth_token` cookie automatically **as long as every request includes credentials** (`fetch` → `credentials: "include"`, `axios` → `withCredentials: true`). There is no `Authorization` header anymore.
+
+On any `401` from a protected route, drop client-side auth state and redirect to login (the cookie is invalid/expired). Use `user.roleId` from the login response for routing/guards, but **never trust it for security** — the server re-checks on every request.
 
 ---
 
@@ -287,7 +290,9 @@ Legend: 🔓 public · 🔑 auth required · roles in parentheses.
 ### Auth — `/api/auth`
 | Method | Path | Access | Body | Returns |
 |--------|------|--------|------|---------|
-| POST | `/login` | 🔓 | `{email, password}` | `LoginResponse` |
+| POST | `/login` | 🔓 | `{email, password}` | `{user}` + sets cookie |
+| POST | `/logout` | 🔓 | — | `{ok:true}` clears cookie |
+| GET | `/me` | 🔑 | — | `{user}` (session check) |
 | POST | `/register` | 🔓 | register body (§3) | `{message}` |
 
 ### Users — `/api/users` (all 🔑)
@@ -451,12 +456,11 @@ Only **approved** questions are eligible to appear in student questionnaires (wi
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("token");
   const res = await fetch(`${BASE}/api${path}`, {
     ...init,
+    credentials: "include", // REQUIRED — sends/receives the auth_token cookie
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
   });
@@ -465,22 +469,25 @@ async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401) { /* clear token, redirect to login */ }
+    if (res.status === 401) { /* drop auth state, redirect to login */ }
     throw new Error(data.error ?? `HTTP ${res.status}`);
   }
   return data as T;
 }
 
-// usage
-const { user, token } = await api<LoginResponse>("/auth/login", {
+// login — cookie is set by the browser from the Set-Cookie header
+const { user } = await api<LoginResponse>("/auth/login", {
   method: "POST",
   body: JSON.stringify({ email, password }),
 });
-localStorage.setItem("token", token);
+// persist `user` (incl. roleId) in app state; no token to store
+
+// logout — clears the cookie server-side
+await api("/auth/logout", { method: "POST" });
 ```
 
 ### Role-based routing
-Decode `token` (e.g. `jwt-decode`) → `roleId`:
+Read `user.roleId` from the login response (the token itself is not JS-readable):
 - `3` (Student) → take-questionnaire + my-results + notifications.
 - `2` (Teacher) → question authoring + results review + dataset.
 - `1` (Admin) → user management (+ everything teacher can see).
@@ -488,8 +495,9 @@ Decode `token` (e.g. `jwt-decode`) → `roleId`:
 ---
 
 ## 9. Open items / coordinate with backend
-1. **CORS** must be enabled (see §1) before any browser integration.
-2. **No refresh-token / logout endpoint** — JWT expiry is handled client-side; on `401`, force re-login. Confirm token lifetime with backend (`JwtAdapter`).
+1. **CORS** is enabled with `credentials: true` (origin via `CORS_ORIGIN`). Add the deployed frontend origin to that env in prod.
+2. **No refresh-token** — cookie Max-Age is 7 days; on `401`, force re-login. Logout endpoint exists (`POST /api/auth/logout`).
 3. **Reference data** (schools, academic grades, roles list) has no public endpoint yet. Registration/profile forms need `schoolId` / `academicGradeId` / `roleId` — request lookup endpoints or hardcode seeded ids for now.
 4. **No password reset** flow exists.
 5. Generation (`/questions/generate`) and questionnaire `complete` are latency-sensitive (external AI calls) — design optimistic/loading UI.
+6. **Cookie + SameSite=Strict caveat:** the frontend must be served from the same site as the API (or a configured origin) and use `credentials: "include"`. Cross-site embedding/redirect flows won't carry the cookie under `Strict`.

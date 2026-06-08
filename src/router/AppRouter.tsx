@@ -1,96 +1,56 @@
-import {
-  createBrowserRouter,
-  Navigate,
-  RouterProvider,
-} from "react-router-dom";
-import { EventsInformationPage } from "../features/events/pages/EventsInformationPage";
-import { EventsRoutes } from "../features/events/routes/EventsRoutes";
-import { RegisterPonenciaPage } from "../features/events/pages/RegisterPonenciaPage";
-import { RegisterTechnicalVisitPage } from "../features/events/pages/RegisterTechnicalVisitPage";
-import { RegisterWorkshopPage } from "../features/events/pages/RegisterWorkshopPage";
-import { LoginPage } from "../features/auth/pages/LoginPage";
-import { ProtectedRoutes } from "./ProtectedRoutes";
-import { NotFoundPage } from "../shared/components/NotFoundPage";
-import { PublicRoutes } from "./PublicRoutes";
-import { useAuth } from "../features/auth/hooks/useAuth";
-import { EditPonenciaPage } from "../features/events/pages/EditPonenciaPage";
-import { EditWorkshopPage } from "../features/events/pages/EditWorkshopPage";
-import { EditTechnicalVisitPage } from "../features/events/pages/EditTechnicalVisitPage";
-
-const PathRedirect = () => {
-  const { isLogged } = useAuth();
-  return isLogged ? (
-    <Navigate to='/events-information' replace />
-  ) : (
-    <Navigate to='/login' replace />
-  );
-};
+import { useEffect, useState } from "react"
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router"
+import { ROUTING } from "@/config/constant.config"
+import { LoginPage } from "@/features/auth/pages/LoginPage"
+import { RegisterPage } from "@/features/auth/pages/RegisterPage"
+import { RegisterPendingPage } from "@/features/auth/pages/RegisterPendingPage"
+import { authService } from "@/features/auth/services/auth.service"
+import { useAuthStore } from "@/features/auth/store/auth.store"
+import { ProtectedRoute } from "./ProtectedRoute"
+import { PublicRoutes } from "./PublicRoutes"
 
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <PathRedirect />,
+    path: ROUTING.HOME,
+    element: <Navigate to={ROUTING.DASHBOARD} replace />,
   },
   {
-    path: "/login",
-    element: (
-      <PublicRoutes>
-        <LoginPage />
-      </PublicRoutes>
-    ),
-  },
-  {
-    path: "/",
-    element: (
-      <ProtectedRoutes>
-        <EventsRoutes />
-      </ProtectedRoutes>
-    ),
+    element: <PublicRoutes />,
     children: [
-      {
-        path: "/",
-        element: <Navigate to='/events-information' />,
-      },
-      {
-        path: "/events-information",
-        element: <EventsInformationPage />,
-      },
-      {
-        path: "/event-register",
-        element: <RegisterPonenciaPage />,
-      },
-      {
-        path: "/workshop-register",
-        element: <RegisterWorkshopPage />,
-      },
-      {
-        path: "/technical-visit-register",
-        element: <RegisterTechnicalVisitPage />,
-      },
-      {
-        path: "/presentation/edit/:eventId",
-        element: <EditPonenciaPage />,
-      },
-      {
-        path: "/workshop/edit/:eventId",
-        element: <EditWorkshopPage />,
-      },
-      {
-        path: "/technical-visite/edit/:eventId",
-        element: <EditTechnicalVisitPage />,
-      },
+      { path: ROUTING.LOGIN, element: <LoginPage /> },
+      { path: ROUTING.REGISTER, element: <RegisterPage /> },
+      { path: ROUTING.REGISTER_PENDING, element: <RegisterPendingPage /> },
     ],
   },
   {
-    path: "*",
-    element: <NotFoundPage />,
+    element: <ProtectedRoute />,
+    children: [{ path: ROUTING.DASHBOARD, element: <div>Dashboard</div> }],
   },
-]);
-    
-export const AppRouter = () => {
-  return (
-    <>
-      <RouterProvider router={router} />
-    </>
-  );
-};
+  {
+    path: "*",
+    element: <Navigate to={ROUTING.HOME} replace />,
+  },
+])
+
+export function AppRouter() {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const { setSession, clearSession } = useAuthStore.getState()
+
+    authService.onUnauthorized(() => {
+      clearSession()
+      void router.navigate(ROUTING.LOGIN)
+    })
+
+    authService
+      .me()
+      .then(({ user }) => setSession(user))
+      .catch(() => clearSession())
+      .finally(() => setReady(true))
+  }, [])
+
+  if (!ready) return null
+
+  return <RouterProvider router={router} />
+}

@@ -1,21 +1,17 @@
-import { Navigate } from "react-router-dom";
-import { ReactNode } from "react";
-import { useAuth } from "../features/auth/hooks/useAuth";
+import { Navigate, Outlet } from "react-router"
+import { ROUTING } from "@/config/constant.config"
+import { useAuthStore } from "@/features/auth/store/auth.store"
 
-interface PublicRoutesProps {
-  children: ReactNode;
+/**
+ * Public-only routes (login/register). Already-authenticated users are sent
+ * to the dashboard instead of seeing the auth forms again.
+ */
+export function PublicRoutes() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  if (isAuthenticated) {
+    return <Navigate to={ROUTING.DASHBOARD} replace />
+  }
+
+  return <Outlet />
 }
-
-export const PublicRoutes = ({ children }: PublicRoutesProps) => {
-  const { isLogged } = useAuth();
-
-  /* console.log(isLogged);
-  console.log(location); */
-
-  /* useEffect(() => {
-  }, [logged]) */
-
-  return (!isLogged)
-    ? children
-    : <Navigate to="/events-information" replace/>
-};
