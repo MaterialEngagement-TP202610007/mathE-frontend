@@ -6,6 +6,10 @@ import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { RegisterPendingPage } from "@/features/auth/pages/RegisterPendingPage"
 import { authService } from "@/features/auth/services/auth.service"
 import { useAuthStore } from "@/features/auth/store/auth.store"
+import { DashboardLayout } from "@/features/dashboard/components/DashboardLayout"
+import { PlaceholderPage } from "@/features/dashboard/components/PlaceholderPage"
+import { DashboardHome } from "@/features/dashboard/pages/DashboardHome"
+import { QuizPage } from "@/features/quiz/pages/QuizPage"
 import { ProtectedRoute } from "./ProtectedRoute"
 import { PublicRoutes } from "./PublicRoutes"
 
@@ -24,7 +28,34 @@ const router = createBrowserRouter([
   },
   {
     element: <ProtectedRoute />,
-    children: [{ path: ROUTING.DASHBOARD, element: <div>Dashboard</div> }],
+    children: [
+      // Full-screen quiz — intentionally outside DashboardLayout (no sidebar/topbar).
+      { path: ROUTING.QUIZ, element: <QuizPage /> },
+      {
+        path: ROUTING.DASHBOARD,
+        element: <DashboardLayout />,
+        children: [
+          { index: true, element: <DashboardHome /> },
+          {
+            path: "nuevo-cuestionario",
+            element: <PlaceholderPage title="Nuevo cuestionario" />,
+          },
+          {
+            path: "historial",
+            element: <PlaceholderPage title="Historial" />,
+          },
+          { path: "perfil", element: <PlaceholderPage title="Perfil" /> },
+          {
+            path: "preguntas",
+            element: <PlaceholderPage title="Preguntas" />,
+          },
+          {
+            path: "estudiantes",
+            element: <PlaceholderPage title="Estudiantes" />,
+          },
+        ],
+      },
+    ],
   },
   {
     path: "*",

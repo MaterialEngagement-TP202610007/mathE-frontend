@@ -4,6 +4,12 @@ export enum ROUTING {
   REGISTER = "/register",
   REGISTER_PENDING = "/register/pending",
   DASHBOARD = "/dashboard",
+  DASHBOARD_NEW = "/dashboard/nuevo-cuestionario",
+  QUIZ = "/cuestionario",
+  DASHBOARD_HISTORY = "/dashboard/historial",
+  DASHBOARD_PROFILE = "/dashboard/perfil",
+  DASHBOARD_QUESTIONS = "/dashboard/preguntas",
+  DASHBOARD_STUDENTS = "/dashboard/estudiantes",
 }
 
 export enum ENDPOINT_SERVER {
