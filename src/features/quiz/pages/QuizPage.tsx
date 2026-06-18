@@ -1,52 +1,141 @@
 import { useEffect, useState } from "react"
-import { Navigate, useNavigate } from "react-router"
-import { ClipboardList, Sparkles, X } from "lucide-react"
+import { useNavigate, useBlocker } from "react-router"
+import { X } from "lucide-react"
 import { ROUTING } from "@/config/constant.config"
 import { MatheLogo } from "@/shared/components/icons/MatheLogo"
 import { useQuizIntroStore } from "../store/quiz-intro.store"
+import { useQuizStore } from "../store/quiz.store"
+import { questionnaireService } from "../services/questionnaire.service"
 import { GeneratingQuiz } from "../components/GeneratingQuiz"
-
-type Phase = "generating" | "ready" | "questions"
+import { QuizRunner } from "../components/QuizRunner"
+import { AbandonDialog } from "../components/AbandonDialog"
+import { ResultSummary } from "@/features/results/components/ResultSummary"
+import type { QuizResult } from "@/features/results/interfaces/result.interface"
 
 /**
- * Full-screen quiz route, rendered OUTSIDE the dashboard shell (no sidebar/
- * topbar). Flow: generating loader → questions. Reaching this route requires
- * having accepted the terms; otherwise we bounce back to the dashboard.
+ * Phase machine:
+ *  checking   → resolve localStorage / accepted / GET active
+ *  generating → POST /questionnaires in flight
+ *  ready      → POST succeeded, waiting for user to click "Continuar"
+ *  questions  → active quiz
+ *  result     → quiz submitted, showing result summary inline
  */
+type Phase = "checking" | "generating" | "ready" | "questions" | "result"
+
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
   const navigate = useNavigate()
-  const [phase, setPhase] = useState<Phase>("generating")
+  const { startSession, clearSession } = useQuizStore()
 
-  // Simulate question generation — swap for the real request later.
+  const [phase, setPhase] = useState<Phase>("checking")
+  const [manualAbandon, setManualAbandon] = useState(false)
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null)
+
+  // ── Navigation blocker (only active while answering) ─────────
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      phase === "questions" &&
+      currentLocation.pathname !== nextLocation.pathname,
+  )
+
+  // ── Browser / tab close guard ────────────────────────────────
   useEffect(() => {
-    if (phase !== "generating") return
-    const t = setTimeout(() => setPhase("ready"), 2600)
-    return () => clearTimeout(t)
+    if (phase !== "questions") return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
   }, [phase])
 
-  if (!accepted) return <Navigate to={ROUTING.DASHBOARD} replace />
+  // ── Initial phase resolution (runs once on mount) ────────────
+  useEffect(() => {
+    const existing = useQuizStore.getState().session
+    if (existing?.status === "in_progress") {
+      setPhase("questions")
+      return
+    }
+    if (accepted) {
+      setPhase("generating")
+      return
+    }
+    questionnaireService
+      .getActive()
+      .then((data) => {
+        startSession(data)
+        setPhase("questions")
+      })
+      .catch(() => navigate(ROUTING.DASHBOARD, { replace: true }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const abandon = () => navigate(ROUTING.DASHBOARD, { replace: true })
+  // ── Create questionnaire once generating phase is entered ────
+  useEffect(() => {
+    if (phase !== "generating") return
+    questionnaireService
+      .create()
+      .then((data) => {
+        startSession(data)
+        setPhase("ready")
+      })
+      .catch(() => navigate(ROUTING.DASHBOARD, { replace: true }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
+  // ── Handlers ─────────────────────────────────────────────────
+  const isAbandonVisible = manualAbandon || blocker.state === "blocked"
+
+  const handleAbandonConfirm = () => {
+    clearSession()
+    setManualAbandon(false)
+    if (blocker.state === "blocked") {
+      blocker.proceed()
+    } else {
+      navigate(ROUTING.DASHBOARD, { replace: true })
+    }
+  }
+
+  const handleAbandonCancel = () => {
+    setManualAbandon(false)
+    if (blocker.state === "blocked") blocker.reset()
+  }
+
+  const handleComplete = (result: QuizResult) => {
+    clearSession()
+    setQuizResult(result)
+    setPhase("result")
+  }
+
+  const isResult = phase === "result"
 
   return (
     <div className="relative flex min-h-svh flex-col bg-mathe-surface">
-      {/* Minimal top bar: brand + abandon */}
       <header className="flex h-20 shrink-0 items-center justify-between px-6 tablet:px-10">
         <MatheLogo width={108} height={48} />
-        <button
-          type="button"
-          onClick={abandon}
-          className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
-        >
-          <X className="size-4" />
-          Abandonar
-        </button>
+        {phase === "questions" && (
+          <button
+            type="button"
+            onClick={() => setManualAbandon(true)}
+            className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
+          >
+            <X className="size-4" />
+            Abandonar
+          </button>
+        )}
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-6 pb-16">
-        {phase === "questions" ? (
-          <QuestionsPlaceholder />
+      <main
+        className={
+          isResult
+            ? "flex flex-1 justify-center overflow-y-auto px-6 pb-16 pt-2"
+            : "flex flex-1 items-center justify-center px-6 pb-16"
+        }
+      >
+        {isResult && quizResult ? (
+          <ResultSummary result={quizResult} />
+        ) : phase === "questions" ? (
+          <QuizRunner onComplete={handleComplete} />
         ) : (
           <GeneratingQuiz
             ready={phase === "ready"}
@@ -54,28 +143,13 @@ export function QuizPage() {
           />
         )}
       </main>
-    </div>
-  )
-}
 
-/** Temporary stand-in for the question runner. */
-function QuestionsPlaceholder() {
-  return (
-    <div className="w-full max-w-2xl rounded-3xl border border-mathe-border bg-mathe-white p-10 text-center shadow-sm animate-fade-in-up">
-      <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-mathe-surface text-mathe-blue">
-        <ClipboardList className="size-7" />
-      </span>
-      <h1 className="mt-5 text-2xl font-bold text-mathe-ink">
-        Tu cuestionario está listo
-      </h1>
-      <p className="mx-auto mt-2 max-w-md text-mathe-muted">
-        Aquí se mostrarán las 10 preguntas del cuestionario. Esta pantalla es un
-        marcador de posición mientras se conecta el motor de preguntas.
-      </p>
-      <span className="mt-6 inline-flex items-center gap-2 rounded-pill bg-mathe-surface px-4 py-2 text-sm font-semibold text-mathe-blue">
-        <Sparkles className="size-4" />
-        Preguntas personalizadas
-      </span>
+      {isAbandonVisible && (
+        <AbandonDialog
+          onConfirm={handleAbandonConfirm}
+          onCancel={handleAbandonCancel}
+        />
+      )}
     </div>
   )
 }

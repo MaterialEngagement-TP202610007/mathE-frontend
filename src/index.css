@@ -65,6 +65,13 @@
   --color-on-surface-background: #ffffff;
   --text-secondary: #6b7280;
 
+  /* chart palette (shadcn chart component) */
+  --chart-1: #0056d2;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #8b5cf6;
+  --chart-5: #ef4444;
+
   /* animation knobs referenced by src/styles/animations.css */
   --animate-duration-fast: 150ms;
   --animate-duration-normal: 300ms;

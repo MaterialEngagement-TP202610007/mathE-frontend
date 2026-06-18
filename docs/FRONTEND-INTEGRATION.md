@@ -64,7 +64,7 @@ interface PublicUser {
   isActive: boolean;
   roleId: number | null;
   academicGradeId: number | null;
-  schoolId: number | null;
+  school: { id: number; name: string | null } | null;  // resolved name, not bare schoolId
   deletedAt: string | null;
 }
 
@@ -72,6 +72,7 @@ interface LoginResponse {
   user: PublicUser;          // token is NOT here — it's set as an HttpOnly cookie
 }
 ```
+> On `login` and `me`, the user's `schoolId` is resolved to a `school` object `{ id, name }`. Other `/api/users/*` endpoints still return the raw `schoolId`.
 
 > The JWT is delivered as the HttpOnly `auth_token` cookie and is **not readable by JavaScript**. The frontend never stores or sends the token manually — the browser attaches the cookie automatically when `credentials: "include"` is set. To know the current user's role, read `user.roleId` from the login response and keep it in app state (or call `GET /api/users/:id`).
 
@@ -159,15 +160,15 @@ interface Questionnaire {
   deletedAt: string | null;
 }
 
-// Questions as delivered to a student taking a questionnaire — NO vak metadata
-// (no vakStyle, no vakValue) so the student isn't biased.
+// Questions as delivered to a student taking a questionnaire. The question's
+// own vakStyle is hidden, but each option exposes its vakValue (V|A|K) label.
 interface PublicQuestionView {
   order: number;
   questionId: number;
   statement: string;
   contentType: string;          // e.g. "text"
   mediaUrl: string | null;
-  options: { id: number; text: string }[];
+  options: { id: number; text: string; vakValue: "V" | "A" | "K" }[];
 }
 
 interface CreateQuestionnaireResponse {
@@ -362,10 +363,31 @@ Only `questionId` is required; the behavioural metrics are nullable but **feed t
 | Method | Path | Roles | Notes |
 |--------|------|-------|-------|
 | GET | `/` | Teacher, Admin | paginated; filters `studentId, gradeId, schoolId, classifierType` |
-| GET | `/my` | Student | own results (paginated) |
+| GET | `/my` | Student | own results (paginated + filtered — see below) |
 | GET | `/questionnaire/:questionnaireId` | Student(own), Teacher, Admin | result for a questionnaire |
 | GET | `/:id` | Student(own), Teacher, Admin | single result |
 | PATCH | `/:id/correct-label` | Teacher, Admin | `{ vakLabel }` — pilot ground-truth |
+
+#### `GET /api/results/my` — query params
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | integer | `1` | Page number |
+| `limit` | integer | `10` | Items per page |
+| `startDate` | string (ISO 8601 date) | — | Include results created on or after this date, e.g. `2025-01-01` |
+| `endDate` | string (ISO 8601 date) | — | Include results created on or before this date, e.g. `2025-12-31` |
+| `predominantStyle` | string | — | Filter by VAK style: `Visual` \| `Auditory` \| `Kinesthetic` |
+
+Returns `Paginated<Result>`. Invalid date strings return `400 { "error": "Invalid startDate" }`.
+
+#### `GET /api/results` — query params (Teacher/Admin)
+| Param | Type | Description |
+|-------|------|-------------|
+| `page` | integer | Page number (default `1`) |
+| `limit` | integer | Items per page (default `10`) |
+| `studentId` | integer | Filter by student |
+| `gradeId` | integer | Filter by academic grade |
+| `schoolId` | integer | Filter by school |
+| `classifierType` | string | Filter by classifier, e.g. `xgboost` |
 
 `correct-label` body: `{ "vakLabel": "Visual" | "Auditory" | "Kinesthetic" }`. Sets `correctedVakLabel` on the result and marks the matching ML dataset row `labelSource=teacher_validated`.
 
@@ -384,6 +406,21 @@ Only `questionId` is required; the behavioural metrics are nullable but **feed t
 | GET | `/:id` | single entry |
 
 `labelSource` ∈ `simple_score | teacher_validated`. `includedInTraining` ∈ `true | false`.
+
+### Schools — `/api/schools` (🔓 public, no auth)
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/?page=&limit=&search=` | paginated; `search` = partial name match (searchbox) |
+| GET | `/:id` | single school by id |
+
+Public so the **registration form** can search/select a school before login. `search` matches the school name (`cenEdu`) case-insensitively. Returns `Paginated<School>`:
+```ts
+interface School {
+  id: number; codMod: string; cenEdu: string; level: string;
+  address: string; district: string; businessName: string;
+  createdAt: string; updatedAt: string;
+}
+```
 
 ---
 
@@ -417,7 +454,7 @@ Only `questionId` is required; the behavioural metrics are nullable but **feed t
 ```
 Notes:
 - The `complete` call is where classification + AI feedback happen (Lambda/XGBoost with `simple_score` fallback, Gemini feedback with predefined fallback). It may take a few seconds — show a loading state.
-- The questionnaire-taking question payload **omits all VAK metadata** by design. Don't expect `vakStyle`/`vakValue` there.
+- The questionnaire-taking question payload hides the question's `vakStyle`, but each **option includes its `vakValue`** (`V`/`A`/`K`) label.
 
 ### B. Teacher authors & validates questions
 ```
@@ -497,7 +534,7 @@ Read `user.roleId` from the login response (the token itself is not JS-readable)
 ## 9. Open items / coordinate with backend
 1. **CORS** is enabled with `credentials: true` (origin via `CORS_ORIGIN`). Add the deployed frontend origin to that env in prod.
 2. **No refresh-token** — cookie Max-Age is 7 days; on `401`, force re-login. Logout endpoint exists (`POST /api/auth/logout`).
-3. **Reference data** (schools, academic grades, roles list) has no public endpoint yet. Registration/profile forms need `schoolId` / `academicGradeId` / `roleId` — request lookup endpoints or hardcode seeded ids for now.
+3. **Reference data:** schools now have a public lookup (`GET /api/schools?search=`). Academic grades and roles still have no endpoint — use seeded ids (`roleId`: 1 admin / 2 teacher / 3 student) for now.
 4. **No password reset** flow exists.
 5. Generation (`/questions/generate`) and questionnaire `complete` are latency-sensitive (external AI calls) — design optimistic/loading UI.
 6. **Cookie + SameSite=Strict caveat:** the frontend must be served from the same site as the API (or a configured origin) and use `credentials: "include"`. Cross-site embedding/redirect flows won't carry the cookie under `Strict`.

@@ -140,7 +140,7 @@ export function SchoolSearchBox({
                         transform: `translateY(${row.start}px)`,
                       }}
                     >
-                      {school.cenEdu}, {school.district}, {school.address}, {school.conMod}
+                      {school.cenEdu}, {school.district}, {school.address}, {school.codMod}
                       </button>
                     )
                   })}

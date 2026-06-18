@@ -6,7 +6,7 @@ export interface School {
   id: number
   cenEdu: string
   address: string
-  conMod: string
+  codMod: string
   level: string
   district: string
   businessName: string

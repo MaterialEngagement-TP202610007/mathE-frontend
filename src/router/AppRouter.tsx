@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router"
 import { ROUTING } from "@/config/constant.config"
+import { Toaster } from "@/components/ui/sonner"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { RegisterPendingPage } from "@/features/auth/pages/RegisterPendingPage"
@@ -10,6 +11,10 @@ import { DashboardLayout } from "@/features/dashboard/components/DashboardLayout
 import { PlaceholderPage } from "@/features/dashboard/components/PlaceholderPage"
 import { DashboardHome } from "@/features/dashboard/pages/DashboardHome"
 import { QuizPage } from "@/features/quiz/pages/QuizPage"
+import { ResultDetailPage } from "@/features/results/pages/ResultDetailPage"
+import { ResultsHistoryPage } from "@/features/results/pages/ResultsHistoryPage"
+import { ProfilePage } from "@/features/users/pages/ProfilePage"
+import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage"
 import { ProtectedRoute } from "./ProtectedRoute"
 import { PublicRoutes } from "./PublicRoutes"
 
@@ -29,7 +34,7 @@ const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
-      // Full-screen quiz — intentionally outside DashboardLayout (no sidebar/topbar).
+      // Full-screen pages — intentionally outside DashboardLayout (no sidebar/topbar).
       { path: ROUTING.QUIZ, element: <QuizPage /> },
       {
         path: ROUTING.DASHBOARD,
@@ -42,9 +47,10 @@ const router = createBrowserRouter([
           },
           {
             path: "historial",
-            element: <PlaceholderPage title="Historial" />,
+            element: <ResultsHistoryPage />,
           },
-          { path: "perfil", element: <PlaceholderPage title="Perfil" /> },
+          { path: "perfil", element: <ProfilePage /> },
+          { path: "notificaciones", element: <NotificationsPage /> },
           {
             path: "preguntas",
             element: <PlaceholderPage title="Preguntas" />,
@@ -52,6 +58,10 @@ const router = createBrowserRouter([
           {
             path: "estudiantes",
             element: <PlaceholderPage title="Estudiantes" />,
+          },
+          {
+            path: "resultados/:id",
+            element: <ResultDetailPage />,
           },
         ],
       },
@@ -83,5 +93,10 @@ export function AppRouter() {
 
   if (!ready) return null
 
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="top-center" />
+    </>
+  )
 }

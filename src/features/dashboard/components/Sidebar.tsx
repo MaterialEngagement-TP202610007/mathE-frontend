@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router"
 import { ROUTING } from "@/config/constant.config"
 import { useAuthStore } from "@/features/auth/store/auth.store"
 import { useQuizIntroStore } from "@/features/quiz/store/quiz-intro.store"
+import { useQuizStatusStore } from "@/features/quiz/store/quiz-status.store"
 import { MatheLogo } from "@/shared/components/icons/MatheLogo"
 import { cn } from "@/lib/utils"
 import { navForRole } from "../utils/nav"
@@ -19,8 +20,11 @@ export function Sidebar() {
   const roleId = useAuthStore((s) => s.roleId)
   const logout = useAuthStore((s) => s.logout)
   const openQuizIntro = useQuizIntroStore((s) => s.open)
+  const availability = useQuizStatusStore((s) => s.availability)
   const navigate = useNavigate()
   const items = navForRole(roleId)
+
+  const quizNavDisabled = availability === "checking" || availability === "has_remote"
 
   const onLogout = async () => {
     await logout()
@@ -40,8 +44,12 @@ export function Sidebar() {
             <button
               key={to}
               type="button"
-              onClick={openQuizIntro}
-              className={navItemClass(false)}
+              onClick={quizNavDisabled ? undefined : openQuizIntro}
+              disabled={quizNavDisabled}
+              className={cn(
+                navItemClass(false),
+                quizNavDisabled && "cursor-not-allowed opacity-40",
+              )}
             >
               <Icon className="size-5" />
               {label}
