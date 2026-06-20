@@ -8,7 +8,7 @@ import {
   Cpu,
   Download,
   Eye,
-  Headphones,
+  Headphones, 
   Loader2,
   Sparkles,
 } from "lucide-react"
@@ -497,7 +497,6 @@ export function ResultDetailPage() {
               value={`#${result.questionnaireId}`}
             />
           </motion.div>
-
         </motion.div>
       </div>
     </div>

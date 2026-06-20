@@ -1,12 +1,9 @@
 import { Outlet } from "react-router"
 import { TermsModal } from "@/features/quiz/components/TermsModal"
+import { BrainLoader } from "@/features/questions/components/BrainLoader"
 import { Sidebar } from "./Sidebar"
 import { Topbar } from "./Topbar"
 
-/**
- * Shell for all authenticated routes: fixed sidebar + topbar, with the routed
- * page rendered in the center via <Outlet> (re-renders on every route change).
- */
 export function DashboardLayout() {
   return (
     <div className="flex min-h-svh bg-mathe-surface">
@@ -18,6 +15,7 @@ export function DashboardLayout() {
         </main>
       </div>
       <TermsModal />
+      <BrainLoader />
     </div>
   )
 }

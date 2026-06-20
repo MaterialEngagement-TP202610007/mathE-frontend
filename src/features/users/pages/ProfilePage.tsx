@@ -23,11 +23,12 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SchoolSearchBox } from "@/features/auth/components/SchoolSearchBox"
 import { useAuthStore } from "@/features/auth/store/auth.store"
-import type { PublicUser } from "@/features/auth/interfaces/auth.interface"
+import { ROLE } from "@/config/constant.config"
 import { ACADEMIC_GRADES } from "@/data/academic-grades"
 import { userService } from "@/features/users/services/user.service"
 import type { UpdateProfilePayload } from "@/features/users/interfaces/user.interface"
 import { getSchoolById, type School } from "@/shared/services/school.service"
+import { authService } from "@/features/auth/services/auth.service"
 
 // ── Animations ───────────────────────────────────────────────────────────────
 
@@ -139,6 +140,7 @@ function FormField({
 
 export function ProfilePage() {
   const user = useAuthStore((s) => s.user)
+  const roleId = useAuthStore((s) => s.roleId)
   const setSession = useAuthStore((s) => s.setSession)
 
   const [school, setSchool] = useState<School | null>(null)
@@ -156,19 +158,14 @@ export function ProfilePage() {
   const [editSchoolName, setEditSchoolName] = useState("")
 
   useEffect(() => {
-    if (!user?.id) return
+    const schoolId = user?.school?.id
+    if (!schoolId) return
     setLoadingSchool(true)
-    userService
-      .getById(user.id)
-      .then((fresh) => {
-        setSession(fresh as PublicUser)
-        if (fresh.schoolId) return getSchoolById(fresh.schoolId)
-        return null
-      })
+    getSchoolById(schoolId)
       .then((s) => setSchool(s))
       .catch(() => setSchool(null))
       .finally(() => setLoadingSchool(false))
-  // run once on mount — user.id never changes mid-session
+  // run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -178,7 +175,7 @@ export function ProfilePage() {
     setEditBirthDate(user.birthDate ?? "")
     setEditPhone(user.phoneNumber ?? "")
     setEditGradeId(user.academicGradeId)
-    setEditSchoolId(user.schoolId)
+    setEditSchoolId(user.school?.id ?? null)
     setEditSchoolName(school?.cenEdu ?? "")
     setIsEditing(true)
   }
@@ -199,11 +196,12 @@ export function ProfilePage() {
       }
       if (editGradeId !== user.academicGradeId)
         payload.academicGradeId = editGradeId ?? undefined
-      if (editSchoolId !== user.schoolId)
+      if (editSchoolId !== (user.school?.id ?? null))
         payload.schoolId = editSchoolId ?? undefined
 
-      const updated = await userService.updateProfile(user.id, payload)
-      setSession(updated as PublicUser)
+      await userService.updateProfile(user.id, payload)
+      const { user: refreshed } = await authService.me()
+      setSession(refreshed)
 
       if (editSchoolId) {
         getSchoolById(editSchoolId)
@@ -251,7 +249,7 @@ export function ProfilePage() {
                 <Shield className="size-3.5" />
                 {roleLabel}
               </span>
-              {gradeName && (
+              {gradeName && roleId !== ROLE.TEACHER && (
                 <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
                   <GraduationCap className="size-3.5" />
                   {gradeName}
@@ -330,23 +328,25 @@ export function ProfilePage() {
                 />
               </FormField>
 
-              <FormField label="Grado académico">
-                <Select
-                  value={editGradeId?.toString() ?? ""}
-                  onValueChange={(v) => setEditGradeId(v ? Number(v) : null)}
-                >
-                  <SelectTrigger className="h-11 rounded-pill">
-                    <SelectValue placeholder="Selecciona tu grado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACADEMIC_GRADES.map((g) => (
-                      <SelectItem key={g.id} value={g.id.toString()}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+              {roleId !== ROLE.TEACHER && (
+                <FormField label="Grado académico">
+                  <Select
+                    value={editGradeId?.toString() ?? ""}
+                    onValueChange={(v) => setEditGradeId(v ? Number(v) : null)}
+                  >
+                    <SelectTrigger className="h-11 rounded-pill">
+                      <SelectValue placeholder="Selecciona tu grado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACADEMIC_GRADES.map((g) => (
+                        <SelectItem key={g.id} value={g.id.toString()}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
+              )}
 
               <div className="tablet:col-span-2">
                 <SchoolSearchBox
@@ -427,11 +427,13 @@ export function ProfilePage() {
                   label="Teléfono"
                   value={user.phoneNumber}
                 />
-                <InfoRow
-                  icon={<GraduationCap className="size-4" />}
-                  label="Grado académico"
-                  value={gradeName}
-                />
+                {roleId !== ROLE.TEACHER && (
+                  <InfoRow
+                    icon={<GraduationCap className="size-4" />}
+                    label="Grado académico"
+                    value={gradeName}
+                  />
+                )}
               </div>
             </motion.div>
 

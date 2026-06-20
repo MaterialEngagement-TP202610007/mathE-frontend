@@ -3,8 +3,12 @@ export type QuestionStatus = "pending" | "approved" | "rejected"
 
 export interface QuestionOption {
   id: number
+  questionId: number
   text: string
   vakValue: "V" | "A" | "K"
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
 }
 
 export interface Question {
@@ -13,9 +17,12 @@ export interface Question {
   contentType: "text" | "image" | "audio"
   mediaUrl: string | null
   vakStyle: VakStyleApi
-  status: QuestionStatus
+  validationStatus: QuestionStatus
+  origin: string
+  generationDate: string
+  teacherId: number | null
   rejectionReason: string | null
-  createdById: number
+  deletedAt: string | null
   createdAt: string
   updatedAt: string
   options: QuestionOption[]
@@ -23,6 +30,13 @@ export interface Question {
 
 export interface GenerateQuestionPayload {
   vakStyle: VakStyleApi
+  teacherId?: number | null
+}
+
+export interface GenerateBatchPayload {
+  count: number
+  vakStyle: VakStyleApi
+  teacherId?: number | null
 }
 
 export interface RejectQuestionPayload {
@@ -31,6 +45,17 @@ export interface RejectQuestionPayload {
 
 export interface ListQuestionsParams {
   status?: QuestionStatus
+  vakStyle?: VakStyleApi
+  fromDate?: string
+  toDate?: string
+  page?: number
+  limit?: number
+}
+
+export interface ValidatedHistoryParams {
+  vakStyle?: VakStyleApi
+  fromDate?: string
+  toDate?: string
   page?: number
   limit?: number
 }

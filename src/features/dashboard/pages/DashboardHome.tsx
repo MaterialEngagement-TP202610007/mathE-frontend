@@ -25,8 +25,8 @@ import { toDisplayStyle, VAK_COLORS } from "@/features/results/utils/vak"
 import { ACADEMIC_GRADES } from "@/data/academic-grades"
 import { cn } from "@/lib/utils"
 import { Avatar } from "../components/Avatar"
-import { PlaceholderPage } from "../components/PlaceholderPage"
 import { VakBadge, type VakStyle } from "../components/VakBadge"
+import { TeacherDashboardHome } from "./TeacherDashboardHome"
 import type { QuizResult } from "@/features/results/interfaces/result.interface"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -170,12 +170,7 @@ export function DashboardHome() {
   }, [roleId])
 
   if (roleId === ROLE.TEACHER) {
-    return (
-      <PlaceholderPage
-        title={`Hola, ${user?.name ?? "profesor"}`}
-        description="Desde aquí podrás generar y validar preguntas y revisar a tus estudiantes."
-      />
-    )
+    return <TeacherDashboardHome />
   }
 
   const name = user?.name ?? "Estudiante"

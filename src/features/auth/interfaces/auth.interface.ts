@@ -9,7 +9,7 @@ export interface PublicUser {
   isActive: boolean
   roleId: number | null
   academicGradeId: number | null
-  schoolId: number | null
+  school: { id: number; name: string | null } | null
   deletedAt: string | null
 }
 

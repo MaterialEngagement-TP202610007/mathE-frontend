@@ -1,7 +1,7 @@
 import { ENDPOINT_SERVER } from "@/config/constant.config"
 import { api } from "@/lib/http"
 import type { PaginatedResponse, PaginationParams } from "@/shared/interfaces/pagination.interface"
-import type { User, UpdateProfilePayload } from "../interfaces/user.interface"
+import type { User, UpdateProfilePayload, UserListFilters } from "../interfaces/user.interface"
 
 export const userService = {
   listAll: async (params?: PaginationParams): Promise<PaginatedResponse<User>> => {
@@ -19,7 +19,7 @@ export const userService = {
     return data
   },
 
-  listStudentsBySchool: async (schoolId: number, params?: PaginationParams): Promise<PaginatedResponse<User>> => {
+  listStudentsBySchool: async (schoolId: number, params?: UserListFilters): Promise<PaginatedResponse<User>> => {
     const { data } = await api.get<PaginatedResponse<User>>(
       `${ENDPOINT_SERVER.USERS}/students/by-school/${schoolId}`,
       { params },

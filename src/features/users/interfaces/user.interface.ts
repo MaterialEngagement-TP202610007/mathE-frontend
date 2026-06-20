@@ -20,3 +20,14 @@ export interface UpdateProfilePayload {
   academicGradeId?: number
   schoolId?: number
 }
+
+export interface UserListFilters {
+  page?: number
+  limit?: number
+  isActive?: boolean
+  academicGradeId?: number
+  birthDateFrom?: string
+  birthDateTo?: string
+  createdAtFrom?: string
+  createdAtTo?: string
+}

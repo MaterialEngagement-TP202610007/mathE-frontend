@@ -1,8 +1,10 @@
 import type { ComponentType } from "react"
 import {
+  BarChart2,
   Clock,
   ClipboardList,
   FileQuestion,
+  History,
   Home,
   User,
   Users,
@@ -30,8 +32,10 @@ const STUDENT_NAV: NavItem[] = [
 
 const TEACHER_NAV: NavItem[] = [
   { label: "Inicio", to: ROUTING.DASHBOARD, icon: Home, end: true },
-  { label: "Preguntas", to: ROUTING.DASHBOARD_QUESTIONS, icon: FileQuestion },
+  { label: "Preguntas Pendientes", to: ROUTING.DASHBOARD_QUESTIONS, icon: FileQuestion },
+  { label: "Historial validación", to: ROUTING.DASHBOARD_VALIDATION_HISTORY, icon: History },
   { label: "Estudiantes", to: ROUTING.DASHBOARD_STUDENTS, icon: Users },
+  { label: "Reportes", to: ROUTING.DASHBOARD_REPORTS, icon: BarChart2 },
   { label: "Perfil", to: ROUTING.DASHBOARD_PROFILE, icon: User },
 ]
 

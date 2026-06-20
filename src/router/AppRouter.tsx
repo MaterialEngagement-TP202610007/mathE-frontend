@@ -15,6 +15,11 @@ import { ResultDetailPage } from "@/features/results/pages/ResultDetailPage"
 import { ResultsHistoryPage } from "@/features/results/pages/ResultsHistoryPage"
 import { ProfilePage } from "@/features/users/pages/ProfilePage"
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage"
+import { PendingQuestionsPage } from "@/features/questions/pages/PendingQuestionsPage"
+import { QuestionReviewPage } from "@/features/questions/pages/QuestionReviewPage"
+import { ValidationHistoryPage } from "@/features/questions/pages/ValidationHistoryPage"
+import { ValidationHistoryDetailPage } from "@/features/questions/pages/ValidationHistoryDetailPage"
+import { StudentsPage } from "@/features/users/pages/StudentsPage"
 import { ProtectedRoute } from "./ProtectedRoute"
 import { PublicRoutes } from "./PublicRoutes"
 
@@ -53,11 +58,27 @@ const router = createBrowserRouter([
           { path: "notificaciones", element: <NotificationsPage /> },
           {
             path: "preguntas",
-            element: <PlaceholderPage title="Preguntas" />,
+            element: <PendingQuestionsPage />,
+          },
+          {
+            path: "preguntas/:id",
+            element: <QuestionReviewPage />,
           },
           {
             path: "estudiantes",
-            element: <PlaceholderPage title="Estudiantes" />,
+            element: <StudentsPage />,
+          },
+          {
+            path: "historial-validacion",
+            element: <ValidationHistoryPage />,
+          },
+          {
+            path: "historial-validacion/:id",
+            element: <ValidationHistoryDetailPage />,
+          },
+          {
+            path: "reportes",
+            element: <PlaceholderPage title="Reportes" />,
           },
           {
             path: "resultados/:id",

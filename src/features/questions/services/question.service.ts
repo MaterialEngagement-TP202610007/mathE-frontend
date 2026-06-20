@@ -4,8 +4,10 @@ import type { PaginatedResponse } from "@/shared/interfaces/pagination.interface
 import type {
   Question,
   GenerateQuestionPayload,
+  GenerateBatchPayload,
   RejectQuestionPayload,
   ListQuestionsParams,
+  ValidatedHistoryParams,
 } from "../interfaces/question.interface"
 
 export const questionService = {
@@ -14,12 +16,21 @@ export const questionService = {
     return data
   },
 
+  generateBatch: async ({ count, vakStyle, teacherId }: GenerateBatchPayload): Promise<Question[]> => {
+    const { data } = await api.post<Question[]>(
+      `${ENDPOINT_SERVER.QUESTIONS}/generate`,
+      { vakStyle, teacherId },
+      { params: { count } },
+    )
+    return data
+  },
+
   listMy: async (params?: ListQuestionsParams): Promise<PaginatedResponse<Question>> => {
     const { data } = await api.get<PaginatedResponse<Question>>(ENDPOINT_SERVER.QUESTIONS_MY, { params })
     return data
   },
 
-  listValidatedHistory: async (params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Question>> => {
+  listValidatedHistory: async (params?: ValidatedHistoryParams): Promise<PaginatedResponse<Question>> => {
     const { data } = await api.get<PaginatedResponse<Question>>(
       ENDPOINT_SERVER.QUESTIONS_VALIDATED_HISTORY,
       { params },

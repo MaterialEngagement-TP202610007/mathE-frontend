@@ -13,6 +13,10 @@ export enum ROUTING {
   DASHBOARD_PROFILE = "/dashboard/perfil",
   DASHBOARD_QUESTIONS = "/dashboard/preguntas",
   DASHBOARD_STUDENTS = "/dashboard/estudiantes",
+  DASHBOARD_QUESTION_REVIEW = "/dashboard/preguntas/:id",
+  DASHBOARD_VALIDATION_HISTORY = "/dashboard/historial-validacion",
+  DASHBOARD_VALIDATION_HISTORY_DETAIL = "/dashboard/historial-validacion/:id",
+  DASHBOARD_REPORTS = "/dashboard/reportes",
 }
 
 export enum ENDPOINT_SERVER {

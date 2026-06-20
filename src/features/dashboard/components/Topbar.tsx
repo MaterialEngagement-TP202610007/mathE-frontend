@@ -2,9 +2,9 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { Bell } from "lucide-react"
 import { useAuthStore } from "@/features/auth/store/auth.store"
-import { ACADEMIC_GRADES } from "@/data/academic-grades"
 import { ROLE, ROUTING } from "@/config/constant.config"
 import { notificationService } from "@/features/notifications/services/notification.service"
+import { ACADEMIC_GRADES } from "@/data/academic-grades"
 import { Avatar } from "./Avatar"
 import { roleLabel } from "../utils/nav"
 
@@ -15,15 +15,16 @@ export function Topbar() {
   const navigate = useNavigate()
 
   const name = user?.name ?? "Usuario"
-  const grade = ACADEMIC_GRADES.find((g) => g.id === user?.academicGradeId)
-  const meta = [grade?.name.split(" ")[0], roleLabel(roleId)]
-    .filter(Boolean)
-    .join(" · ")
+  const schoolName = user?.school?.name
+  const gradeName = roleId === ROLE.STUDENT
+    ? ACADEMIC_GRADES.find((g) => g.id === user?.academicGradeId)?.name
+    : undefined
+  const meta = [roleLabel(roleId), gradeName, schoolName].filter(Boolean).join(" · ")
 
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    if (roleId !== ROLE.STUDENT) return
+    if (roleId !== ROLE.STUDENT && roleId !== ROLE.TEACHER) return
 
     const fetch = () => {
       notificationService.getUnreadCount()
@@ -39,8 +40,8 @@ export function Topbar() {
   return (
     <header className="flex h-20 shrink-0 items-center justify-end gap-2 border-b border-mathe-border bg-mathe-white px-8">
 
-      {/* Bell icon — students only */}
-      {roleId === ROLE.STUDENT && (
+      {/* Bell icon — students and teachers */}
+      {(roleId === ROLE.STUDENT || roleId === ROLE.TEACHER) && (
         <button
           type="button"
           onClick={() => navigate(ROUTING.DASHBOARD_NOTIFICATIONS)}
