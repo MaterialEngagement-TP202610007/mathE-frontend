@@ -1,7 +1,9 @@
 import { z } from "zod"
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/
-const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/
+const PHONE_REGEX = /^\d{7,15}$/
+// Only letters (including Spanish accented), spaces, hyphens, apostrophes, periods
+const SAFE_NAME_REGEX = /^[a-zA-ZÀ-ÿ\s'\-.]+$/
 
 export const loginSchema = z.object({
   email: z.email("Correo electrónico no válido"),
@@ -14,7 +16,11 @@ export const loginSchema = z.object({
  */
 export const registerTextSchema = z
   .object({
-    name: z.string().min(2, "Ingresa tu nombre completo"),
+    name: z
+      .string()
+      .min(2, "Ingresa tu nombre completo")
+      .max(100, "Nombre demasiado largo")
+      .regex(SAFE_NAME_REGEX, "El nombre solo puede contener letras, espacios y guiones"),
     email: z.email("Correo electrónico no válido"),
     birthDate: z
       .string()
@@ -22,7 +28,7 @@ export const registerTextSchema = z
       .refine((d) => !Number.isNaN(Date.parse(d)), "Fecha no válida"),
     phoneNumber: z
       .string()
-      .regex(PHONE_REGEX, "Teléfono no válido (formato E.164)")
+      .regex(PHONE_REGEX, "Solo se permiten dígitos (7–15 números)")
       .optional()
       .or(z.literal("")),
     password: z

@@ -56,7 +56,7 @@ export function GenerateQuestionsModal({ open, onClose, onGenerate }: Props) {
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-mathe-border bg-mathe-white shadow-2xl">
+            <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-mathe-white shadow-2xl">
 
               {/* Header */}
               <div className="relative bg-gradient-to-r from-mathe-blue to-blue-400 px-7 py-6">

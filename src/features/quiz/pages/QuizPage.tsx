@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, useBlocker } from "react-router"
 import { X } from "lucide-react"
 import { ROUTING } from "@/config/constant.config"
@@ -30,11 +30,13 @@ export function QuizPage() {
   const [phase, setPhase] = useState<Phase>("checking")
   const [manualAbandon, setManualAbandon] = useState(false)
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null)
+  const abandonedRef = useRef(false)
 
   // ── Navigation blocker (only active while answering) ─────────
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       phase === "questions" &&
+      !abandonedRef.current &&
       currentLocation.pathname !== nextLocation.pathname,
   )
 
@@ -86,14 +88,22 @@ export function QuizPage() {
   // ── Handlers ─────────────────────────────────────────────────
   const isAbandonVisible = manualAbandon || blocker.state === "blocked"
 
-  const handleAbandonConfirm = () => {
+  const handleAbandonConfirm = async () => {
+    const questionnaireId = useQuizStore.getState().session?.questionnaireId
+    abandonedRef.current = true
+
+    if (questionnaireId) {
+      try {
+        await questionnaireService.abandon(questionnaireId)
+      } catch {
+        // ignore — navigate regardless
+      }
+    }
+
     clearSession()
     setManualAbandon(false)
-    if (blocker.state === "blocked") {
-      blocker.proceed()
-    } else {
-      navigate(ROUTING.DASHBOARD, { replace: true })
-    }
+    if (blocker.state === "blocked") blocker.reset()
+    navigate(ROUTING.DASHBOARD, { replace: true })
   }
 
   const handleAbandonCancel = () => {

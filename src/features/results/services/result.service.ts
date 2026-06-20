@@ -2,6 +2,7 @@ import { ENDPOINT_SERVER } from "@/config/constant.config"
 import { api } from "@/lib/http"
 import type { PaginatedResponse } from "@/shared/interfaces/pagination.interface"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
+import type { SchoolStats, GradeStats } from "../interfaces/stats.interface"
 
 export interface ListResultsParams {
   page?: number
@@ -49,6 +50,24 @@ export const resultService = {
     const { data } = await api.patch<QuizResult>(
       `${ENDPOINT_SERVER.RESULTS}/${id}/correct-label`,
       { vakLabel },
+    )
+    return data
+  },
+
+  getSchoolStats: async (schoolId: number): Promise<SchoolStats> => {
+    const { data } = await api.get<SchoolStats>(
+      `${ENDPOINT_SERVER.RESULTS_STATS_SCHOOL}/${schoolId}`,
+    )
+    return data
+  },
+
+  getSchoolStatsByGrade: async (
+    schoolId: number,
+    level: "Primaria" | "Secundaria",
+  ): Promise<GradeStats[]> => {
+    const { data } = await api.get<GradeStats[]>(
+      `${ENDPOINT_SERVER.RESULTS_STATS_SCHOOL}/${schoolId}/by-grade`,
+      { params: { level } },
     )
     return data
   },

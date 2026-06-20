@@ -1,48 +1,67 @@
-import { ArrowRight, Bot, LayoutDashboard } from "lucide-react"
-import { motion } from "motion/react"
-import { useNavigate } from "react-router"
-import { VakBadge } from "@/features/dashboard/components/VakBadge"
-import { ConfettiCelebration } from "./ConfettiCelebration"
-import { StyleDistribution } from "./StyleDistribution"
-import { toDisplayStyle } from "../utils/vak"
-import type { QuizResult } from "../interfaces/result.interface"
+import { ArrowRight, Bot, LayoutDashboard } from "lucide-react";
+import { motion } from "motion/react";
+import { useNavigate } from "react-router";
+import { VakBadge } from "@/features/dashboard/components/VakBadge";
+import { ConfettiCelebration } from "./ConfettiCelebration";
+import { StyleDistribution } from "./StyleDistribution";
+import { toDisplayStyle } from "../utils/vak";
+import type { QuizResult } from "../interfaces/result.interface";
+import { ROUTING } from "@/config/constant.config";
 
 const STYLE_ICON_CLASS: Record<string, string> = {
   Visual: "bg-mathe-blue/10 text-mathe-blue",
   Auditory: "bg-emerald-50 text-emerald-600",
   Kinesthetic: "bg-amber-50 text-amber-600",
-}
+};
 
 const STYLE_SVG: Record<string, React.ReactNode> = {
   Visual: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="size-9">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="size-9"
+    >
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
   ),
   Auditory: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="size-9">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="size-9"
+    >
       <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
       <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
     </svg>
   ),
   Kinesthetic: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="size-9">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="size-9"
+    >
       <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
       <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
       <path d="M10 10.5a2 2 0 0 0-2-2a2 2 0 0 0-2 2V18a6 6 0 0 0 6 6h2a6 6 0 0 0 6-6v-8a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
     </svg>
   ),
-}
+};
 
 interface ResultSummaryProps {
-  result: QuizResult
+  result: QuizResult;
 }
 
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.1 } },
-}
+};
 
 const card = {
   hidden: { opacity: 0, y: 24 },
@@ -51,13 +70,13 @@ const card = {
     y: 0,
     transition: { type: "spring" as const, stiffness: 260, damping: 28 },
   },
-}
+};
 
 export function ResultSummary({ result }: ResultSummaryProps) {
-  const navigate = useNavigate()
-  const displayStyle = toDisplayStyle(result.predominantStyle)
-  const iconClass = STYLE_ICON_CLASS[result.predominantStyle]
-  const svgIcon = STYLE_SVG[result.predominantStyle]
+  const navigate = useNavigate();
+  const displayStyle = toDisplayStyle(result.predominantStyle);
+  const iconClass = STYLE_ICON_CLASS[result.predominantStyle];
+  const svgIcon = STYLE_SVG[result.predominantStyle];
 
   return (
     <>
@@ -74,14 +93,18 @@ export function ResultSummary({ result }: ResultSummaryProps) {
           variants={card}
           className="flex flex-col items-center gap-4 rounded-2xl border border-mathe-border bg-mathe-white p-8 text-center shadow-sm"
         >
-          <span className={`grid size-20 place-items-center rounded-full ${iconClass}`}>
+          <span
+            className={`grid size-20 place-items-center rounded-full ${iconClass}`}
+          >
             {svgIcon}
           </span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-mathe-muted">
               Tu estilo de aprendizaje predominante es
             </p>
-            <h1 className="mt-2 text-5xl font-bold text-mathe-ink">{displayStyle}</h1>
+            <h1 className="mt-2 text-5xl font-bold text-mathe-ink">
+              {displayStyle}
+            </h1>
           </div>
           <VakBadge style={displayStyle} className="mt-1 px-3 py-1.5 text-sm" />
         </motion.div>
@@ -106,7 +129,9 @@ export function ResultSummary({ result }: ResultSummaryProps) {
                 Generado por IA
               </span>
             </div>
-            <p className="text-sm leading-relaxed text-mathe-ink">{result.aiFeedback}</p>
+            <p className="text-sm leading-relaxed text-mathe-ink">
+              {result.aiFeedback}
+            </p>
           </motion.div>
         )}
 
@@ -136,7 +161,7 @@ export function ResultSummary({ result }: ResultSummaryProps) {
         >
           <button
             type="button"
-            onClick={() => navigate("/dashboard", { replace: true })}
+            onClick={() => navigate(ROUTING.DASHBOARD, { replace: true })}
             className="flex-1 inline-flex h-12 items-center justify-center rounded-pill border border-mathe-border bg-mathe-white px-6 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface"
           >
             <LayoutDashboard className="mr-2 size-4" />
@@ -144,7 +169,12 @@ export function ResultSummary({ result }: ResultSummaryProps) {
           </button>
           <button
             type="button"
-            onClick={() => navigate(`/dashboard/resultados/${result.id}`)}
+            onClick={() =>
+              navigate(
+                ROUTING.RESULT_DETAIL.replace(":id", result.id.toString()),
+                { replace: true },
+              )
+            }
             className="flex-1 inline-flex h-12 items-center justify-center gap-2 rounded-pill bg-mathe-blue px-6 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
           >
             Ver informe detallado
@@ -153,5 +183,5 @@ export function ResultSummary({ result }: ResultSummaryProps) {
         </motion.div>
       </motion.div>
     </>
-  )
+  );
 }

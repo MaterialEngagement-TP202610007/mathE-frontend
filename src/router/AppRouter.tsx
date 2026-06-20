@@ -13,6 +13,8 @@ import { DashboardHome } from "@/features/dashboard/pages/DashboardHome"
 import { QuizPage } from "@/features/quiz/pages/QuizPage"
 import { ResultDetailPage } from "@/features/results/pages/ResultDetailPage"
 import { ResultsHistoryPage } from "@/features/results/pages/ResultsHistoryPage"
+import { ReportsPage } from "@/features/results/pages/ReportsPage"
+import { StudentResultsHistoryPage } from "@/features/results/pages/StudentResultsHistoryPage"
 import { ProfilePage } from "@/features/users/pages/ProfilePage"
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage"
 import { PendingQuestionsPage } from "@/features/questions/pages/PendingQuestionsPage"
@@ -78,7 +80,11 @@ const router = createBrowserRouter([
           },
           {
             path: "reportes",
-            element: <PlaceholderPage title="Reportes" />,
+            element: <ReportsPage />,
+          },
+          {
+            path: "reportes/estudiante/:studentId",
+            element: <StudentResultsHistoryPage />,
           },
           {
             path: "resultados/:id",

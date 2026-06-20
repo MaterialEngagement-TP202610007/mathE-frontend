@@ -175,10 +175,16 @@ export function RegisterPage() {
           label="Teléfono (opcional)"
           name="phoneNumber"
           type="tel"
+          inputMode="numeric"
+          pattern="[0-9]*"
           autoComplete="tel"
-          placeholder="123456789"
+          placeholder="987654321"
+          maxLength={15}
           value={form.phoneNumber}
-          onChange={(e) => set("phoneNumber", e.target.value)}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "")
+            set("phoneNumber", digits)
+          }}
           error={fieldErrors.phoneNumber}
         />
         <SchoolSearchBox
