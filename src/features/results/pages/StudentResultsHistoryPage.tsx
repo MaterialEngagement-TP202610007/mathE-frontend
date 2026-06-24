@@ -11,7 +11,6 @@ import {
   ClipboardList,
   ExternalLink,
   Eye,
-  SlidersHorizontal,
   TrendingUp,
   Volume2,
   X,
