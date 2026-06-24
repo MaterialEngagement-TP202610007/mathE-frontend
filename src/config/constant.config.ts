@@ -17,7 +17,7 @@ export enum ROUTING {
   DASHBOARD_VALIDATION_HISTORY = "/dashboard/historial-validacion",
   DASHBOARD_VALIDATION_HISTORY_DETAIL = "/dashboard/historial-validacion/:id",
   DASHBOARD_REPORTS = "/dashboard/reportes",
-  DASHBOARD_STUDENT_RESULT_HISTORY = "/dashboard/reportes/estudiante/:studentId",
+  DASHBOARD_STUDENT_EVOLUTION = "/dashboard/evolucion/estudiante/:studentId",
 }
 
 export enum ENDPOINT_SERVER {
@@ -38,6 +38,9 @@ export enum ENDPOINT_SERVER {
   RESULTS = "/results",
   RESULTS_MY = "/results/my",
   RESULTS_STATS_SCHOOL = "/results/stats/school",
+  RESULTS_STATS_USER = "/results/stats/user",
+  RESULTS_EVOLUTION = "/results/evolution",
+  RESULTS_STUDENT = "/results/student",
   NOTIFICATIONS = "/notifications",
   NOTIFICATIONS_UNREAD_COUNT = "/notifications/unread-count",
   NOTIFICATIONS_READ_ALL = "/notifications/read-all",

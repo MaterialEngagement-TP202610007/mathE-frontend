@@ -2,7 +2,7 @@ import { ENDPOINT_SERVER } from "@/config/constant.config"
 import { api } from "@/lib/http"
 import type { PaginatedResponse } from "@/shared/interfaces/pagination.interface"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
-import type { SchoolStats, GradeStats } from "../interfaces/stats.interface"
+import type { SchoolStats, GradeStats, UserResultStats, UserEvolutionResult } from "../interfaces/stats.interface"
 
 export interface ListResultsParams {
   page?: number
@@ -68,6 +68,42 @@ export const resultService = {
     const { data } = await api.get<GradeStats[]>(
       `${ENDPOINT_SERVER.RESULTS_STATS_SCHOOL}/${schoolId}/by-grade`,
       { params: { level } },
+    )
+    return data
+  },
+
+  getUserStats: async (userId: number): Promise<UserResultStats> => {
+    const { data } = await api.get<UserResultStats>(
+      `${ENDPOINT_SERVER.RESULTS_STATS_USER}/${userId}`,
+    )
+    return data
+  },
+
+  getEvolution: async (
+    studentId: number,
+    params?: { granularity?: "day" | "month" | "year"; from?: string; to?: string },
+  ): Promise<UserEvolutionResult> => {
+    const { data } = await api.get<UserEvolutionResult>(
+      `${ENDPOINT_SERVER.RESULTS_EVOLUTION}/${studentId}`,
+      { params },
+    )
+    return data
+  },
+
+  listByStudent: async (
+    studentId: number,
+    params?: {
+      page?: number
+      limit?: number
+      startDate?: string
+      endDate?: string
+      predominantStyle?: VakStyleApi
+      classifierType?: string
+    },
+  ): Promise<PaginatedResponse<QuizResult>> => {
+    const { data } = await api.get<PaginatedResponse<QuizResult>>(
+      `${ENDPOINT_SERVER.RESULTS_STUDENT}/${studentId}`,
+      { params },
     )
     return data
   },

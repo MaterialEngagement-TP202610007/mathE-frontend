@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import {
   Activity,
   ArrowLeft,
@@ -12,40 +12,44 @@ import {
   Headphones,
   ImageOff,
   XCircle,
-} from "lucide-react"
-import { motion } from "motion/react"
-import { ROUTING } from "@/config/constant.config"
-import { questionService } from "../services/question.service"
-import { VakBadge } from "@/features/dashboard/components/VakBadge"
-import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
-import { cn } from "@/lib/utils"
-import type { Question, VakStyleApi } from "../interfaces/question.interface"
+} from "lucide-react";
+import { motion } from "motion/react";
+import { ROUTING } from "@/config/constant.config";
+import { questionService } from "../services/question.service";
+import { VakBadge } from "@/features/dashboard/components/VakBadge";
+import {
+  toSpanishStyle,
+  formatQuestionId,
+  formatDate,
+} from "@/features/dashboard/utils";
+import { cn } from "@/lib/utils";
+import type { Question, VakStyleApi } from "../interfaces/question.interface";
 
 const VAK_ICONS: Record<VakStyleApi, typeof Eye> = {
   Visual: Eye,
   Auditory: Headphones,
   Kinesthetic: Activity,
-}
+};
 
 const VAK_OPTION_COLORS: Record<"V" | "A" | "K", string> = {
   V: "text-mathe-blue bg-blue-50 border-blue-100",
   A: "text-emerald-600 bg-emerald-50 border-emerald-100",
   K: "text-amber-600 bg-amber-50 border-amber-100",
-}
+};
 
-const OPTION_LABELS = ["A", "B", "C", "D", "E"]
+const OPTION_LABELS = ["A", "B", "C", "D", "E"];
 
 function MediaSection({
   question,
   imgError,
   onImgError,
 }: {
-  question: Question
-  imgError: boolean
-  onImgError: () => void
+  question: Question;
+  imgError: boolean;
+  onImgError: () => void;
 }) {
-  const MediaIcon = VAK_ICONS[question.vakStyle]
-  if (question.contentType === "text" && !question.mediaUrl) return null
+  const MediaIcon = VAK_ICONS[question.vakStyle];
+  if (question.contentType === "text" && !question.mediaUrl) return null;
   return (
     <div className="overflow-hidden rounded-2xl">
       {question.mediaUrl && !imgError ? (
@@ -67,10 +71,18 @@ function MediaSection({
         </div>
       )}
     </div>
-  )
+  );
 }
 
-function OptionItem({ label, text, vakValue }: { label: string; text: string; vakValue: "V" | "A" | "K" }) {
+function OptionItem({
+  label,
+  text,
+  vakValue,
+}: {
+  label: string;
+  text: string;
+  vakValue: "V" | "A" | "K";
+}) {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-mathe-border bg-mathe-white px-4 py-3">
       <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-mathe-surface text-xs font-bold text-mathe-muted">
@@ -86,42 +98,43 @@ function OptionItem({ label, text, vakValue }: { label: string; text: string; va
         {vakValue}
       </span>
     </div>
-  )
+  );
 }
 
 export function ValidationHistoryDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-  const [question, setQuestion] = useState<Question | null>(null)
-  const [siblingIds, setSiblingIds] = useState<number[]>([])
-  const [loading, setLoading] = useState(true)
-  const [imgError, setImgError] = useState(false)
+  const [question, setQuestion] = useState<Question | null>(null);
+  const [siblingIds, setSiblingIds] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    if (!id) return
-    setLoading(true)
-    setImgError(false)
-    setQuestion(null)
+    if (!id) return;
+    setLoading(true);
+    setImgError(false);
+    setQuestion(null);
 
     Promise.all([
       questionService.getById(Number(id)),
       questionService.listValidatedHistory({ limit: 100 }),
     ])
       .then(([q, history]) => {
-        setQuestion(q)
-        setSiblingIds(history.items.map((i) => i.id))
+        setQuestion(q);
+        setSiblingIds(history.items.map((i) => i.id));
       })
       .catch(() => navigate(ROUTING.DASHBOARD_VALIDATION_HISTORY))
-      .finally(() => setLoading(false))
-  }, [id, navigate])
+      .finally(() => setLoading(false));
+  }, [id, navigate]);
 
-  const currentIndex = siblingIds.indexOf(Number(id))
-  const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1] : null
-  const nextId = currentIndex < siblingIds.length - 1 ? siblingIds[currentIndex + 1] : null
+  const currentIndex = siblingIds.indexOf(Number(id));
+  const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1] : null;
+  const nextId =
+    currentIndex < siblingIds.length - 1 ? siblingIds[currentIndex + 1] : null;
 
   function goTo(targetId: number) {
-    navigate(`${ROUTING.DASHBOARD_VALIDATION_HISTORY}/${targetId}`)
+    navigate(`${ROUTING.DASHBOARD_VALIDATION_HISTORY}/${targetId}`);
   }
 
   if (loading) {
@@ -132,12 +145,12 @@ export function ValidationHistoryDetailPage() {
           <p className="text-sm text-mathe-muted">Cargando pregunta…</p>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!question) return null
+  if (!question) return null;
 
-  const isApproved = question.validationStatus === "approved"
+  const isApproved = question.validationStatus === "approved";
 
   return (
     <motion.div
@@ -169,7 +182,9 @@ export function ValidationHistoryDetailPage() {
             Historial de validación
           </button>
           <span className="text-mathe-muted">/</span>
-          <span className="font-semibold text-mathe-ink">{formatQuestionId(question.id)}</span>
+          <span className="font-semibold text-mathe-ink">
+            {formatQuestionId(question.id)}
+          </span>
           {siblingIds.length > 0 && (
             <>
               <span className="text-mathe-muted">/</span>
@@ -207,7 +222,6 @@ export function ValidationHistoryDetailPage() {
 
       {/* ── Two-column layout ── */}
       <div className="grid gap-6 laptop:grid-cols-3">
-
         {/* ── Left: Question card (read-only) ── */}
         <div className="grid gap-4 laptop:col-span-2">
           <div className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm">
@@ -260,10 +274,11 @@ export function ValidationHistoryDetailPage() {
         {/* ── Right: Validation result panel ── */}
         <div className="laptop:col-span-1">
           <div className="sticky top-6 grid gap-4">
-
             {/* Status card */}
             <div className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm">
-              <h3 className="mb-4 text-base font-bold text-mathe-ink">Resultado de validación</h3>
+              <h3 className="mb-4 text-base font-bold text-mathe-ink">
+                Resultado de validación
+              </h3>
 
               <div
                 className={cn(
@@ -287,7 +302,12 @@ export function ValidationHistoryDetailPage() {
                   >
                     {isApproved ? "Aprobada" : "Rechazada"}
                   </p>
-                  <p className={cn("text-xs", isApproved ? "text-emerald-600" : "text-rose-500")}>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      isApproved ? "text-emerald-600" : "text-rose-500",
+                    )}
+                  >
                     {isApproved
                       ? "Esta pregunta fue validada y puede aparecer en cuestionarios"
                       : "Esta pregunta fue descartada del banco de preguntas"}
@@ -301,20 +321,33 @@ export function ValidationHistoryDetailPage() {
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-amber-700">
                     Motivo de rechazo
                   </p>
-                  <p className="text-sm leading-snug text-amber-800">{question.rejectionReason}</p>
+                  <p className="text-sm leading-snug text-amber-800">
+                    {question.rejectionReason}
+                  </p>
                 </div>
               )}
 
               {/* Metadata */}
               <div className="mt-5 grid gap-3 border-t border-mathe-border pt-4">
                 {[
-                  { label: "Generada el", value: formatDate(question.generationDate) },
-                  { label: "Estilo VAK", value: toSpanishStyle(question.vakStyle) },
+                  {
+                    label: "Generada el",
+                    value: formatDate(question.generationDate),
+                  },
+                  {
+                    label: "Estilo VAK",
+                    value: toSpanishStyle(question.vakStyle),
+                  },
                   { label: "Origen", value: question.origin },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex items-start justify-between gap-2">
+                  <div
+                    key={label}
+                    className="flex items-start justify-between gap-2"
+                  >
                     <span className="text-xs text-mathe-muted">{label}</span>
-                    <span className="text-right text-xs font-semibold text-mathe-ink">{value}</span>
+                    <span className="text-right text-xs font-semibold text-mathe-ink">
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -354,5 +387,5 @@ export function ValidationHistoryDetailPage() {
         </div>
       </div>
     </motion.div>
-  )
+  );
 }

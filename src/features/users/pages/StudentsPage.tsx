@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,6 +7,7 @@ import {
   Mail,
   Phone,
   Trash2,
+  TrendingUp,
   UserCheck,
   UserMinus,
   Users,
@@ -34,6 +36,7 @@ import { userService } from "../services/user.service"
 import type { User } from "../interfaces/user.interface"
 import { cn } from "@/lib/utils"
 import { formatDate } from "@/features/dashboard/utils"
+import { ROUTING } from "@/config/constant.config"
 
 const PAGE_SIZE = 10
 
@@ -196,6 +199,7 @@ function DetailDialog({
   student: User | null
   onClose: () => void
 }) {
+  const navigate = useNavigate()
   return (
     <Dialog open={student !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
@@ -267,6 +271,23 @@ function DetailDialog({
                 </div>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigate(
+                  ROUTING.DASHBOARD_STUDENT_EVOLUTION.replace(
+                    ":studentId",
+                    String(student.id),
+                  ),
+                )
+                onClose()
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-pill bg-mathe-blue py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mathe-blue/90"
+            >
+              <TrendingUp className="size-4" />
+              Ver evolución del estudiante
+            </button>
           </>
         )}
       </DialogContent>

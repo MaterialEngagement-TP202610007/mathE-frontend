@@ -9,8 +9,9 @@ import {
   Eye,
   ExternalLink,
   Headphones,
-  History,
   Target,
+  TrendingUp,
+  UserRound,
   Users,
   Zap,
 } from "lucide-react";
@@ -30,11 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { VakBadge } from "@/features/dashboard/components/VakBadge";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { resultService } from "../services/result.service";
 import { userService } from "@/features/users/services/user.service";
-import { ResultDetailModal } from "../components/ResultDetailModal";
 import { toDisplayStyle } from "../utils/vak";
 import { ACADEMIC_GRADES } from "@/data/academic-grades";
 import { ROUTING } from "@/config/constant.config";
@@ -296,6 +302,103 @@ function Pagination({
   );
 }
 
+// ── Student profile modal ─────────────────────────────────────────────────────
+
+function StudentProfileModal({
+  student,
+  studentId,
+  onClose,
+}: {
+  student: User | null;
+  studentId: number;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const name = student?.name ?? `Estudiante #${studentId}`;
+  const initials = student ? getInitials(student.name) : "?";
+  const grade = student?.academicGradeId
+    ? gradeLabel(student.academicGradeId)
+    : "—";
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Información del estudiante</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-center gap-4">
+          <div className="grid size-14 shrink-0 place-items-center rounded-full bg-mathe-blue/10 text-xl font-bold text-mathe-blue">
+            {initials}
+          </div>
+          <div>
+            <p className="text-lg font-bold text-mathe-ink">{name}</p>
+            {student && (
+              <span
+                className={cn(
+                  "mt-1 inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold ring-1",
+                  student.isActive
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                    : "bg-rose-50 text-rose-600 ring-rose-200",
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    student.isActive ? "bg-emerald-500" : "bg-rose-500",
+                  )}
+                />
+                {student.isActive ? "Activo" : "Inactivo"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {student && (
+          <div className="grid gap-2.5">
+            {[
+              { label: "Correo", value: student.email },
+              { label: "Grado", value: grade },
+              ...(student.phoneNumber
+                ? [{ label: "Teléfono", value: student.phoneNumber }]
+                : []),
+            ].map(({ label, value }) => (
+              <div
+                key={label}
+                className="rounded-xl border border-mathe-border bg-mathe-surface/40 px-4 py-3"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                  {label}
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-mathe-ink">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            navigate(
+              ROUTING.DASHBOARD_STUDENT_EVOLUTION.replace(
+                ":studentId",
+                String(studentId),
+              ),
+            );
+            onClose();
+          }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-pill bg-mathe-blue py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mathe-blue/90"
+        >
+          <TrendingUp className="size-4" />
+          Ver evolución del estudiante
+        </button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function ReportsPage() {
@@ -308,7 +411,7 @@ export function ReportsPage() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   // ── Chart section ──
-  const [level, setLevel] = useState<Level>("Secundaria");
+  const [level, setLevel] = useState<Level>("Primaria");
   const [gradeData, setGradeData] = useState<GradeStats[]>([]);
   const [gradeLoading, setGradeLoading] = useState(true);
 
@@ -319,15 +422,14 @@ export function ReportsPage() {
   const [resultsLoading, setResultsLoading] = useState(true);
 
   // Filters
-  const [filterGrade, setFilterGrade] = useState<string>("all"); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [filterGrade] = useState<string>("all");
   const [filterClassifier, setFilterClassifier] = useState<string>("all");
 
   // Student map (id → User) for name/grade lookup
   const [studentMap, setStudentMap] = useState<Map<number, User>>(new Map());
 
-  // Detail modal
-  const [detailResult, setDetailResult] = useState<QuizResult | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  // Student info modal
+  const [studentModalId, setStudentModalId] = useState<number | null>(null);
 
   // ── Fetch stats ──
   useEffect(() => {
@@ -790,31 +892,25 @@ export function ReportsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            title="Ver detalle"
-                            onClick={() => {
-                              setDetailResult(r);
-                              setDetailOpen(true);
-                            }}
+                            title="Ver resultado completo"
+                            onClick={() =>
+                              navigate(
+                                ROUTING.RESULT_DETAIL.replace(":id", String(r.id)),
+                              )
+                            }
                             className="inline-flex h-8 items-center gap-1.5 rounded-pill border border-mathe-border bg-mathe-white px-3 text-xs font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface"
                           >
                             <ExternalLink className="size-3.5" />
-                            Detalle
+                            Resultado
                           </button>
                           <button
                             type="button"
-                            title="Ver historial del estudiante"
-                            onClick={() =>
-                              navigate(
-                                ROUTING.DASHBOARD_STUDENT_RESULT_HISTORY.replace(
-                                  ":studentId",
-                                  String(r.studentId),
-                                ),
-                              )
-                            }
+                            title="Ver información del estudiante"
+                            onClick={() => setStudentModalId(r.studentId)}
                             className="inline-flex h-8 items-center gap-1.5 rounded-pill bg-mathe-blue px-3 text-xs font-semibold text-white transition-colors hover:bg-mathe-blue/90"
                           >
-                            <History className="size-3.5" />
-                            Historial
+                            <UserRound className="size-3.5" />
+                            Estudiante
                           </button>
                         </div>
                       </td>
@@ -850,15 +946,14 @@ export function ReportsPage() {
         )}
       </motion.div>
 
-      {/* ── Detail modal ── */}
-      <ResultDetailModal
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        result={detailResult}
-        student={
-          detailResult ? (studentMap.get(detailResult.studentId) ?? null) : null
-        }
-      />
+      {/* ── Student info modal ── */}
+      {studentModalId !== null && (
+        <StudentProfileModal
+          student={studentMap.get(studentModalId) ?? null}
+          studentId={studentModalId}
+          onClose={() => setStudentModalId(null)}
+        />
+      )}
     </motion.div>
   );
 }

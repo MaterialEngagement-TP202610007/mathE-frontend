@@ -83,7 +83,7 @@ const router = createBrowserRouter([
             element: <ReportsPage />,
           },
           {
-            path: "reportes/estudiante/:studentId",
+            path: "evolucion/estudiante/:studentId",
             element: <StudentResultsHistoryPage />,
           },
           {

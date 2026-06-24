@@ -14,3 +14,28 @@ export interface GradeStats {
   avgAuditoryProbability: number
   avgKinestheticProbability: number
 }
+
+export interface UserResultStats {
+  userId: number
+  total: number
+  predominantStyle: VakStyleApi | null
+  profile: "Estable" | "Variable" | null
+}
+
+export interface EvolutionDataPoint {
+  period: string
+  predominantStyle: VakStyleApi
+  avgVisualProbability: number
+  avgAuditoryProbability: number
+  avgKinestheticProbability: number
+  count: number
+}
+
+export interface UserEvolutionResult {
+  studentId: number
+  from: string
+  to: string
+  granularity: "day" | "month" | "year"
+  totalEvaluations: number
+  dataPoints: EvolutionDataPoint[]
+}
