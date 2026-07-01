@@ -25,18 +25,15 @@ interface QuizRunnerProps {
 }
 
 export function QuizRunner({ onComplete }: QuizRunnerProps) {
-  // ── All hooks must be called unconditionally before any early return ──
   const session = useQuizStore((s) => s.session)
   const setAnswer = useQuizStore((s) => s.setAnswer)
   const setCurrentIndex = useQuizStore((s) => s.setCurrentIndex)
   const [runnerPhase, setRunnerPhase] = useState<RunnerPhase>("answering")
   const [direction, setDirection] = useState<1 | -1>(1)
 
-  // Derive a stable questionId for the behaviour hook even when session is null.
   const activeQuestionId = session?.questions[session.currentIndex]?.questionId ?? 0
   const { markAnswered, flushCurrent, getBehaviour } = useQuestionBehaviour(activeQuestionId)
 
-  // Session is cleared by QuizPage right before navigating away — render nothing.
   if (!session) return null
 
   const { currentIndex, questions, answers, questionnaireId } = session
@@ -85,7 +82,7 @@ export function QuizRunner({ onComplete }: QuizRunnerProps) {
 
   if (runnerPhase === "submitting") {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 text-center animate-fade-in">
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
         <div className="relative grid size-24 place-items-center">
           <span className="absolute inset-0 animate-ping rounded-full bg-mathe-blue/20" />
           <span className="relative grid size-16 place-items-center rounded-2xl bg-mathe-blue text-mathe-white shadow-sm">
@@ -100,97 +97,182 @@ export function QuizRunner({ onComplete }: QuizRunnerProps) {
 
   if (runnerPhase === "review") {
     return (
-      <ReviewScreen
-        questions={questions}
-        answers={answers}
-        allAnswered={allAnswered}
-        onEditQuestion={(index) => {
-          setDirection(index > currentIndex ? 1 : -1)
-          setCurrentIndex(index)
-          setRunnerPhase("answering")
-        }}
-        onSubmit={handleSubmit}
-      />
+      <div className="flex flex-1 items-start justify-center overflow-y-auto p-8">
+        <ReviewScreen
+          questions={questions}
+          answers={answers}
+          allAnswered={allAnswered}
+          onEditQuestion={(index) => {
+            setDirection(index > currentIndex ? 1 : -1)
+            setCurrentIndex(index)
+            setRunnerPhase("answering")
+          }}
+          onSubmit={handleSubmit}
+        />
+      </div>
     )
   }
 
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-8">
-      <ProgressBar current={currentIndex + 1} total={questions.length} />
+    <div className="flex flex-1 overflow-hidden">
 
-      <AnimatePresence mode="wait" custom={direction}>
-        <motion.div
-          key={currentIndex}
-          custom={direction}
-          variants={{
-            enter: (d: number) => ({ x: d * 56, opacity: 0, scale: 0.98 }),
-            center: { x: 0, opacity: 1, scale: 1 },
-            exit: (d: number) => ({ x: d * -56, opacity: 0, scale: 0.98 }),
-          }}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ type: "spring", stiffness: 300, damping: 32 }}
-        >
-          <QuestionCard
-            question={currentQuestion}
-            selectedOptionId={currentAnswer?.selectedOptionId}
-            onSelect={handleOptionSelect}
-          />
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => goTo(currentIndex - 1)}
-          className={cn(
-            "inline-flex h-11 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface",
-            currentIndex === 0 && "invisible pointer-events-none",
-          )}
-        >
-          <ArrowLeft className="size-4" />
-          Anterior
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          {questions.map((q, i) => (
-            <button
-              key={q.questionId}
-              type="button"
-              onClick={() => goTo(i)}
-              aria-label={`Ir a pregunta ${i + 1}`}
-              className={cn(
-                "rounded-full transition-all duration-300",
-                i === currentIndex
-                  ? "size-3 bg-mathe-blue"
-                  : answers[q.questionId]
-                    ? "size-2 bg-mathe-blue/40 hover:bg-mathe-blue/60"
-                    : "size-2 bg-mathe-border hover:bg-mathe-muted/30",
-              )}
-            />
-          ))}
+      {/* ── Sidebar — hidden on mobile/tablet, visible from laptop breakpoint ── */}
+      <aside className="hidden laptop:flex w-72 shrink-0 flex-col border-r border-mathe-border bg-mathe-white">
+        <div className="border-b border-mathe-border px-5 py-4">
+          <p className="text-sm font-semibold text-mathe-ink">Preguntas del cuestionario</p>
+          <p className="mt-0.5 text-xs text-mathe-muted">
+            {answeredCount} de {questions.length} respondidas
+          </p>
         </div>
 
-        {isLastQuestion ? (
+        <nav className="flex-1 overflow-y-auto p-3 grid content-start gap-0.5">
+          {questions.map((q, i) => {
+            const isActive = i === currentIndex
+            const isAnswered = Boolean(answers[q.questionId])
+            return (
+              <button
+                key={q.questionId}
+                type="button"
+                onClick={() => goTo(i)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all max-w-full min-w-0",
+                  isActive
+                    ? "bg-mathe-blue text-mathe-white"
+                    : isAnswered
+                      ? "text-mathe-ink hover:bg-emerald-50"
+                      : "text-mathe-muted hover:bg-mathe-surface",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : isAnswered
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-mathe-border/60 text-mathe-muted",
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <span className="flex-1 truncate text-xs leading-tight line-clamp-1">
+                  {q.statement}
+                </span>
+                {isAnswered && !isActive && (
+                  <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
+                )}
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="border-t border-mathe-border p-4">
           <button
             type="button"
             onClick={() => setRunnerPhase("review")}
-            className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
+            className={cn(
+              "flex w-full h-11 items-center justify-center gap-2 rounded-pill text-sm font-semibold transition-colors",
+              allAnswered
+                ? "bg-mathe-blue text-mathe-white hover:bg-mathe-blue-deep"
+                : "bg-mathe-surface text-mathe-muted hover:bg-mathe-border/60",
+            )}
           >
-            <CheckCircle2 className="size-4" />
-            Revisar
+            <Send className="size-4" />
+            Finalizar cuestionario
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => goTo(currentIndex + 1)}
-            className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
-          >
-            Siguiente
-            <ArrowRight className="size-4" />
-          </button>
-        )}
+          {!allAnswered && (
+            <p className="mt-2 text-center text-[11px] text-mathe-muted">
+              {questions.length - answeredCount === 1
+                ? "Falta 1 pregunta sin responder"
+                : `Faltan ${questions.length - answeredCount} sin responder`}
+            </p>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex flex-1 flex-col overflow-y-auto pt-4">
+        <div className="px-8 py-4">
+          <ProgressBar current={currentIndex + 1} total={questions.length} />
+        </div>
+
+        <div className="flex flex-1 flex-col py-8 mx-auto max-w-3xl">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={currentIndex}
+              custom={direction}
+              variants={{
+                enter: (d: number) => ({ x: d * 56, opacity: 0, scale: 0.98 }),
+                center: { x: 0, opacity: 1, scale: 1 },
+                exit: (d: number) => ({ x: d * -56, opacity: 0, scale: 0.98 }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 32 }}
+            >
+              <QuestionCard
+                question={currentQuestion}
+                selectedOptionId={currentAnswer?.selectedOptionId}
+                onSelect={handleOptionSelect}
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-8 flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => goTo(currentIndex - 1)}
+              className={cn(
+                "inline-flex h-11 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface",
+                currentIndex === 0 && "invisible pointer-events-none",
+              )}
+            >
+              <ArrowLeft className="size-4" />
+              Anterior
+            </button>
+
+            {/* Dot progress — mobile/tablet only (sidebar replaces it on laptop+) */}
+            <div className="flex items-center gap-1.5 laptop:hidden">
+              {questions.map((q, i) => (
+                <button
+                  key={q.questionId}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  aria-label={`Ir a pregunta ${i + 1}`}
+                  className={cn(
+                    "rounded-full transition-all duration-300",
+                    i === currentIndex
+                      ? "size-2.5 bg-mathe-blue"
+                      : answers[q.questionId]
+                        ? "size-2 bg-emerald-400"
+                        : "size-2 bg-mathe-border hover:bg-mathe-muted/40",
+                  )}
+                />
+              ))}
+            </div>
+
+            {isLastQuestion ? (
+              <button
+                type="button"
+                onClick={() => setRunnerPhase("review")}
+                className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
+              >
+                <CheckCircle2 className="size-4" />
+                Revisar
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => goTo(currentIndex + 1)}
+                className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
+              >
+                Siguiente
+                <ArrowRight className="size-4" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

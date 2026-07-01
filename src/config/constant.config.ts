@@ -44,6 +44,7 @@ export enum ENDPOINT_SERVER {
   NOTIFICATIONS = "/notifications",
   NOTIFICATIONS_UNREAD_COUNT = "/notifications/unread-count",
   NOTIFICATIONS_READ_ALL = "/notifications/read-all",
+  NOTIFICATIONS_STREAM = "/notifications/stream",
   ML_DATASET = "/ml-dataset",
 }
 

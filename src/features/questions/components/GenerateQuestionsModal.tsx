@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { Brain, Clock, Info, Sparkles, X } from "lucide-react"
+import { Bell, Brain, Info, Sparkles, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { VakStyleApi } from "../interfaces/question.interface"
 
@@ -154,13 +154,12 @@ export function GenerateQuestionsModal({ open, onClose, onGenerate }: Props) {
                   </div>
                 </div>
 
-                {/* Time warning */}
-                <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-                  <Clock className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                  <p className="text-xs text-amber-700">
-                    Esta operación puede tomar entre{" "}
-                    <strong>10–30 segundos</strong> dependiendo de la cantidad solicitada.
-                    Por favor no cierres la ventana.
+                {/* Background generation notice */}
+                <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+                  <Bell className="mt-0.5 size-4 shrink-0 text-mathe-blue" />
+                  <p className="text-xs text-mathe-blue">
+                    La generación se realiza <strong>en segundo plano</strong>. Puedes seguir
+                    navegando y recibirás una notificación cuando las preguntas estén listas.
                   </p>
                 </div>
 

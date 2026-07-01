@@ -39,6 +39,12 @@ export interface GenerateBatchPayload {
   teacherId?: number | null
 }
 
+export interface GenerateBatchResponse {
+  message: string
+  vakStyle: string
+  count: number
+}
+
 export interface RejectQuestionPayload {
   rejectionReason: string
 }

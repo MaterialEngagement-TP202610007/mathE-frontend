@@ -5,6 +5,7 @@ import type {
   Question,
   GenerateQuestionPayload,
   GenerateBatchPayload,
+  GenerateBatchResponse,
   RejectQuestionPayload,
   ListQuestionsParams,
   ValidatedHistoryParams,
@@ -16,8 +17,8 @@ export const questionService = {
     return data
   },
 
-  generateBatch: async ({ count, vakStyle, teacherId }: GenerateBatchPayload): Promise<Question[]> => {
-    const { data } = await api.post<Question[]>(
+  generateBatch: async ({ count, vakStyle, teacherId }: GenerateBatchPayload): Promise<GenerateBatchResponse> => {
+    const { data } = await api.post<GenerateBatchResponse>(
       `${ENDPOINT_SERVER.QUESTIONS}/generate`,
       { vakStyle, teacherId },
       { params: { count } },

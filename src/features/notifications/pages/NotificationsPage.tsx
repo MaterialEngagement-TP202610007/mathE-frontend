@@ -13,6 +13,7 @@ import {
   ChartPie,
 } from "lucide-react"
 import { notificationService } from "../services/notification.service"
+import { useNotificationStore } from "../store/notification.store"
 import type { Notification, NotificationType } from "../interfaces/notification.interface"
 import { cn } from "@/lib/utils"
 
@@ -168,6 +169,8 @@ export function NotificationsPage() {
   const [loading, setLoading] = useState(true)
   const [markingAll, setMarkingAll] = useState(false)
 
+  const { setUnreadCount, decrementUnreadCount } = useNotificationStore()
+
   const totalPages = Math.ceil(total / LIMIT)
 
   const fetchNotifications = useCallback(async () => {
@@ -191,10 +194,18 @@ export function NotificationsPage() {
   useEffect(() => { void fetchNotifications() }, [fetchNotifications])
 
   function handleMarkRead(id: number) {
+    const target = notifications.find((n) => n.id === id)
+    if (target && !target.isRead) {
+      decrementUnreadCount()
+    }
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
     )
     notificationService.markOneRead(id).catch(() => {
+      if (target && !target.isRead) {
+        // rollback — but we don't know the exact increment so just refetch count
+        notificationService.getUnreadCount().then(setUnreadCount).catch(() => {})
+      }
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)),
       )
@@ -206,6 +217,7 @@ export function NotificationsPage() {
     try {
       await notificationService.markAllRead()
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+      setUnreadCount(0)
       toast.success("Todas las notificaciones marcadas como leídas")
     } catch {
       toast.error("Error al marcar notificaciones. Intenta de nuevo.")

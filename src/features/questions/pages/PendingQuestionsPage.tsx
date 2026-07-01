@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { ChevronLeft, ChevronRight, ClipboardList, Sparkles, X } from "lucide-react"
 import { motion } from "motion/react"
@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { DatePickerInput } from "@/components/ui/date-picker"
 import { useAuthStore } from "@/features/auth/store/auth.store"
+import { useNotificationStore } from "@/features/notifications/store/notification.store"
 import { questionService } from "../services/question.service"
 import type { Question, VakStyleApi } from "../interfaces/question.interface"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
@@ -13,7 +14,6 @@ import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboa
 import { cn } from "@/lib/utils"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
-import { GeneratingOverlay } from "../components/GeneratingOverlay"
 
 const PAGE_SIZE = 10
 
@@ -100,9 +100,17 @@ function Pagination({
   )
 }
 
+const VAK_LABEL: Record<string, string> = {
+  Visual: "Visual",
+  Auditory: "Auditivo",
+  Kinesthetic: "Kinestésico",
+}
+
 export function PendingQuestionsPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const lastSSEEvent = useNotificationStore((s) => s.lastSSEEvent)
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -112,15 +120,32 @@ export function PendingQuestionsPage() {
   const [page, setPage] = useState(1)
 
   const [showModal, setShowModal] = useState(false)
-  const [generating, setGenerating] = useState(false)
 
-  useEffect(() => {
+  function fetchPending() {
     questionService
       .listMy({ status: "pending", page: 1, limit: 100 })
       .then((res) => setAllQuestions(res.items))
       .catch(() => setAllQuestions([]))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchPending() }, [])
+
+  // Debounced refetch — each question_generated fires individually so we batch
+  // all rapid-fire events into one list reload 1 s after the last one arrives.
+  useEffect(() => {
+    if (!lastSSEEvent || lastSSEEvent.type !== "question_generated") return
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current)
+    refetchTimerRef.current = setTimeout(() => {
+      questionService
+        .listMy({ status: "pending", page: 1, limit: 100 })
+        .then((res) => {
+          setAllQuestions(res.items)
+          setPage(1)
+        })
+        .catch(() => {})
+    }, 1000)
+  }, [lastSSEEvent])
 
   function handleVakFilter(v: VakFilter) {
     setVakFilter(v)
@@ -144,17 +169,12 @@ export function PendingQuestionsPage() {
   }
 
   async function handleGenerate(count: number, vakStyle: VakStyleApi) {
-    setGenerating(true)
     try {
       await questionService.generateBatch({ count, vakStyle, teacherId: user?.id })
-      toast.success(`${count} preguntas generadas correctamente. Ya puedes revisarlas abajo.`)
-      const res = await questionService.listMy({ status: "pending", page: 1, limit: 100 })
-      setAllQuestions(res.items)
-      setPage(1)
+      const label = VAK_LABEL[vakStyle] ?? vakStyle
+      toast.info(`Generando ${count} preguntas ${label}… recibirás una notificación cuando estén listas.`)
     } catch {
-      toast.error("Error al generar las preguntas. Intenta de nuevo.")
-    } finally {
-      setGenerating(false)
+      toast.error("Error al iniciar la generación. Intenta de nuevo.")
     }
   }
 
@@ -209,7 +229,6 @@ export function PendingQuestionsPage() {
         onClose={() => setShowModal(false)}
         onGenerate={handleGenerate}
       />
-      <GeneratingOverlay visible={generating} />
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-3 justify-between">

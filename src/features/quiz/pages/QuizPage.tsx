@@ -121,7 +121,7 @@ export function QuizPage() {
 
   return (
     <div className="relative flex min-h-svh flex-col bg-mathe-surface">
-      <header className="flex h-20 shrink-0 items-center justify-between px-6 tablet:px-10">
+      <header className="flex h-20 shrink-0 items-center justify-between px-6 tablet:px-10 bg-mathe-white border-b border-mathe-border">
         <MatheLogo width={108} height={48} />
         {phase === "questions" && (
           <button
@@ -139,7 +139,9 @@ export function QuizPage() {
         className={
           isResult
             ? "flex flex-1 justify-center overflow-y-auto px-6 pb-16 pt-2"
-            : "flex flex-1 items-center justify-center px-6 pb-16"
+            : phase === "questions"
+              ? "flex flex-1 overflow-hidden"
+              : "flex flex-1 items-center justify-center px-6 pb-16"
         }
       >
         {isResult && quizResult ? (

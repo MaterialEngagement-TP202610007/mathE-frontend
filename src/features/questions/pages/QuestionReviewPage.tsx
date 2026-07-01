@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import {
-  Activity,
   AlertTriangle,
   ArrowLeft,
   Brain,
   CheckCircle2,
-  Eye,
-  Headphones,
   History,
+  Image,
   ImageOff,
   Sparkles,
   X,
@@ -21,15 +19,9 @@ import { useQuestionLoaderStore } from "../store/question-loader.store"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
-import type { Question, VakStyleApi } from "../interfaces/question.interface"
+import type { Question } from "../interfaces/question.interface"
 
 // ── VAK helpers ───────────────────────────────────────────────────────────────
-
-const VAK_ICONS: Record<VakStyleApi, typeof Eye> = {
-  Visual: Eye,
-  Auditory: Headphones,
-  Kinesthetic: Activity,
-}
 
 const VAK_OPTION_COLORS: Record<"V" | "A" | "K", string> = {
   V: "text-mathe-blue bg-blue-50 border-blue-100",
@@ -50,28 +42,54 @@ function MediaSection({
   imgError: boolean
   onImgError: () => void
 }) {
-  const MediaIcon = VAK_ICONS[question.vakStyle]
+  const [loaded, setLoaded] = useState(false)
 
-  if (question.contentType === "text" && !question.mediaUrl) return null
+  // Reset loaded state when the question changes
+  useEffect(() => { setLoaded(false) }, [question.id])
+
+  const hasMedia = Boolean(question.mediaUrl) && !imgError
 
   return (
-    <div className="overflow-hidden rounded-2xl">
-      {question.mediaUrl && !imgError ? (
-        <img
-          src={question.mediaUrl}
-          alt="Contenido adjunto"
-          onError={onImgError}
-          className="max-h-64 w-full rounded-2xl object-cover"
-        />
+    <div className="relative h-[525px] w-full overflow-hidden rounded-2xl bg-mathe-surface">
+      {hasMedia ? (
+        <>
+          {/* Skeleton while loading */}
+          <AnimatePresence>
+            {!loaded && (
+              <motion.div
+                key="skeleton"
+                className="absolute inset-0 animate-pulse rounded-2xl bg-mathe-border/50"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              />
+            )}
+          </AnimatePresence>
+          <img
+            src={question.mediaUrl!}
+            alt="Contenido adjunto"
+            onLoad={() => setLoaded(true)}
+            onError={onImgError}
+            className={cn(
+              "h-full w-full rounded-2xl object-cover transition-opacity duration-300",
+              loaded ? "opacity-100" : "opacity-0",
+            )}
+          />
+        </>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-blue-50/70 py-10 text-center">
-          <MediaIcon className="size-10 text-blue-300" />
-          <p className="text-sm text-mathe-muted">Contenido visual adjunto</p>
-          {imgError && (
-            <span className="flex items-center gap-1 text-xs text-red-400">
-              <ImageOff className="size-3" /> No se pudo cargar la imagen
-            </span>
-          )}
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+          <span className="grid size-14 place-items-center rounded-2xl bg-mathe-border/30">
+            <Image className="size-7 text-mathe-muted/50" />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-mathe-muted">
+              {imgError ? "No se pudo cargar la imagen" : "Sin contenido multimedia"}
+            </p>
+            {imgError && (
+              <span className="mt-1 flex items-center justify-center gap-1 text-xs text-red-400">
+                <ImageOff className="size-3" /> URL inaccesible
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -333,7 +351,7 @@ export function QuestionReviewPage() {
                 {question.statement}
               </h2>
 
-              {/* Media */}
+              {/* Media — always rendered; shows skeleton/fallback when no URL */}
               <div className="mt-4">
                 <MediaSection
                   question={question}
