@@ -5,7 +5,7 @@ import { VakBadge } from "@/features/dashboard/components/VakBadge";
 import { ConfettiCelebration } from "./ConfettiCelebration";
 import { StyleDistribution } from "./StyleDistribution";
 import { toDisplayStyle } from "../utils/vak";
-import type { QuizResult } from "../interfaces/result.interface";
+import type { QuizCompletionResult } from "@/features/quiz/interfaces/questionnaire.interface";
 import { ROUTING } from "@/config/constant.config";
 
 const STYLE_ICON_CLASS: Record<string, string> = {
@@ -55,7 +55,7 @@ const STYLE_SVG: Record<string, React.ReactNode> = {
 };
 
 interface ResultSummaryProps {
-  result: QuizResult;
+  result: QuizCompletionResult;
 }
 
 const container = {
@@ -136,7 +136,7 @@ export function ResultSummary({ result }: ResultSummaryProps) {
         )}
 
         {/* Mixed profile */}
-        {result.isMixedProfile && result.secondaryStyle && (
+        {result.isMixedProfile && (
           <motion.div
             variants={card}
             className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm"
@@ -145,12 +145,8 @@ export function ResultSummary({ result }: ResultSummaryProps) {
               Perfil mixto
             </p>
             <p className="mt-2 text-sm text-mathe-muted">
-              Tu perfil presenta componentes secundarios relevantes:
+              Tu perfil presenta componentes secundarios relevantes.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <VakBadge style={displayStyle} />
-              <VakBadge style={toDisplayStyle(result.secondaryStyle)} />
-            </div>
           </motion.div>
         )}
 
@@ -171,7 +167,7 @@ export function ResultSummary({ result }: ResultSummaryProps) {
             type="button"
             onClick={() =>
               navigate(
-                ROUTING.RESULT_DETAIL.replace(":id", result.id.toString()),
+                ROUTING.RESULT_DETAIL.replace(":id", result.resultId.toString()),
                 { replace: true },
               )
             }

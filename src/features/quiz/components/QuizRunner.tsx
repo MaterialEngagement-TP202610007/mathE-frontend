@@ -15,13 +15,16 @@ import { questionnaireService } from "../services/questionnaire.service"
 import { useQuestionBehaviour } from "../hooks/use-question-behaviour"
 import { ProgressBar } from "./ProgressBar"
 import { QuestionCard } from "./QuestionCard"
-import type { QuizQuestion, QuizAnswerRecord } from "../interfaces/questionnaire.interface"
-import type { QuizResult } from "@/features/results/interfaces/result.interface"
+import type {
+  QuizQuestion,
+  QuizAnswerRecord,
+  QuizCompletionResult,
+} from "../interfaces/questionnaire.interface"
 
 type RunnerPhase = "answering" | "review" | "submitting"
 
 interface QuizRunnerProps {
-  onComplete: (result: QuizResult) => void
+  onComplete: (result: QuizCompletionResult) => void
 }
 
 export function QuizRunner({ onComplete }: QuizRunnerProps) {

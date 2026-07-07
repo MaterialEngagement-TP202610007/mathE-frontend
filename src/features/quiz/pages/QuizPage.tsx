@@ -10,7 +10,7 @@ import { GeneratingQuiz } from "../components/GeneratingQuiz"
 import { QuizRunner } from "../components/QuizRunner"
 import { AbandonDialog } from "../components/AbandonDialog"
 import { ResultSummary } from "@/features/results/components/ResultSummary"
-import type { QuizResult } from "@/features/results/interfaces/result.interface"
+import type { QuizCompletionResult } from "../interfaces/questionnaire.interface"
 
 /**
  * Phase machine:
@@ -29,7 +29,7 @@ export function QuizPage() {
 
   const [phase, setPhase] = useState<Phase>("checking")
   const [manualAbandon, setManualAbandon] = useState(false)
-  const [quizResult, setQuizResult] = useState<QuizResult | null>(null)
+  const [quizResult, setQuizResult] = useState<QuizCompletionResult | null>(null)
   const abandonedRef = useRef(false)
 
   // ── Navigation blocker (only active while answering) ─────────
@@ -111,7 +111,7 @@ export function QuizPage() {
     if (blocker.state === "blocked") blocker.reset()
   }
 
-  const handleComplete = (result: QuizResult) => {
+  const handleComplete = (result: QuizCompletionResult) => {
     clearSession()
     setQuizResult(result)
     setPhase("result")

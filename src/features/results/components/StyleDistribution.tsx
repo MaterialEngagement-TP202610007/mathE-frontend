@@ -1,14 +1,20 @@
 import { cn } from "@/lib/utils"
-import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
+import type { VakStyleApi } from "../interfaces/result.interface"
 import { toDisplayStyle, VAK_COLORS } from "../utils/vak"
 
+interface ResultProbabilities {
+  visualProbability: number
+  auditoryProbability: number
+  kinestheticProbability: number
+}
+
 interface StyleDistributionProps {
-  result: QuizResult
+  result: ResultProbabilities
 }
 
 const STYLES: VakStyleApi[] = ["Visual", "Auditory", "Kinesthetic"]
 
-function getProb(result: QuizResult, style: VakStyleApi): number {
+function getProb(result: ResultProbabilities, style: VakStyleApi): number {
   return style === "Visual"
     ? result.visualProbability
     : style === "Auditory"

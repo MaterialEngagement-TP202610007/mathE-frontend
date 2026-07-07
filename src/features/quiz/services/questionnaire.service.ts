@@ -1,8 +1,7 @@
 import { ENDPOINT_SERVER } from "@/config/constant.config"
 import { api } from "@/lib/http"
 import type { PaginatedResponse } from "@/shared/interfaces/pagination.interface"
-import type { QuestionnaireResponse } from "../interfaces/questionnaire.interface"
-import type { QuizResult } from "@/features/results/interfaces/result.interface"
+import type { QuestionnaireResponse, QuizCompletionResult } from "../interfaces/questionnaire.interface"
 
 export interface SubmitAnswerItem {
   questionId: number
@@ -64,8 +63,8 @@ export const questionnaireService = {
     return data
   },
 
-  submit: async (id: number, payload: SubmitPayload): Promise<QuizResult> => {
-    const { data } = await api.patch<QuizResult>(
+  submit: async (id: number, payload: SubmitPayload): Promise<QuizCompletionResult> => {
+    const { data } = await api.patch<QuizCompletionResult>(
       `${ENDPOINT_SERVER.QUESTIONNAIRES}/${id}/complete`,
       payload,
     )

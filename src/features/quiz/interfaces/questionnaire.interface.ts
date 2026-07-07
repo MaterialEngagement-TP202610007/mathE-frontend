@@ -28,6 +28,19 @@ export interface QuizAnswerRecord {
   selectedOptionId: number
 }
 
+/** Response from PATCH /questionnaires/:id/complete — a lean subset of the full QuizResult. */
+export interface QuizCompletionResult {
+  resultId: number
+  predominantStyle: "Visual" | "Auditory" | "Kinesthetic"
+  visualProbability: number
+  auditoryProbability: number
+  kinestheticProbability: number
+  isMixedProfile: boolean
+  classifierType: string
+  aiFeedback: string | null
+  feedbackSource: string | null
+}
+
 export interface QuizSession {
   questionnaireId: number
   studentId: number
