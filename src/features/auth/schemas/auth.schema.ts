@@ -1,7 +1,10 @@
 import { z } from "zod"
 
+// Mirrors the backend `regularExps` (backend/src/config/helpers/regular-exp.ts) — keep in sync.
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/
-const PHONE_REGEX = /^\d{7,15}$/
+export const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/
+export const PHONE_ERROR_MESSAGE =
+  "Teléfono no válido: solo dígitos sin espacios (máx. 15); puede iniciar con +, pero no con 0"
 // Only letters (including Spanish accented), spaces, hyphens, apostrophes, periods
 const SAFE_NAME_REGEX = /^[a-zA-ZÀ-ÿ\s'\-.]+$/
 
@@ -28,14 +31,14 @@ export const registerTextSchema = z
       .refine((d) => !Number.isNaN(Date.parse(d)), "Fecha no válida"),
     phoneNumber: z
       .string()
-      .regex(PHONE_REGEX, "Solo se permiten dígitos (7–15 números)")
+      .regex(PHONE_REGEX, PHONE_ERROR_MESSAGE)
       .optional()
       .or(z.literal("")),
     password: z
       .string()
       .regex(
         PASSWORD_REGEX,
-        "Mínimo 8 caracteres, con al menos una letra y un número",
+        "Mínimo 8 caracteres, solo letras y números (sin símbolos, tildes, ñ ni espacios), con al menos una letra y un número",
       ),
     confirmPassword: z.string(),
   })

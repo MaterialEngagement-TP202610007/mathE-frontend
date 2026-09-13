@@ -18,6 +18,7 @@ export enum ROUTING {
   DASHBOARD_VALIDATION_HISTORY_DETAIL = "/dashboard/historial-validacion/:id",
   DASHBOARD_REPORTS = "/dashboard/reportes",
   DASHBOARD_STUDENT_EVOLUTION = "/dashboard/evolucion/estudiante/:studentId",
+  DASHBOARD_TEACHERS = "/dashboard/profesores",
 }
 
 export enum ENDPOINT_SERVER {
@@ -45,7 +46,6 @@ export enum ENDPOINT_SERVER {
   NOTIFICATIONS_UNREAD_COUNT = "/notifications/unread-count",
   NOTIFICATIONS_READ_ALL = "/notifications/read-all",
   NOTIFICATIONS_STREAM = "/notifications/stream",
-  ML_DATASET = "/ml-dataset",
 }
 
 export enum BREAKPOINTS {

@@ -80,15 +80,6 @@ export function LoginPage() {
           error={fieldErrors.password}
         />
 
-        <div className="-mt-2 flex justify-end">
-          <Link
-            to={ROUTING.LOGIN}
-            className="text-sm font-semibold text-mathe-blue hover:underline"
-          >
-            ¿Olvidaste tu contraseña?
-          </Link>
-        </div>
-
         <Button
           type="submit"
           disabled={isLoading}

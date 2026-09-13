@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { ArrowRight, CheckCircle2, ClipboardList, Clock, Sparkles, XCircle } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
@@ -8,12 +8,26 @@ import { useAuthStore } from "@/features/auth/store/auth.store"
 import { questionService } from "@/features/questions/services/question.service"
 import { QuestionRow } from "@/features/questions/components/QuestionRow"
 import { GenerateQuestionsModal } from "@/features/questions/components/GenerateQuestionsModal"
-import { GeneratingOverlay } from "@/features/questions/components/GeneratingOverlay"
+import { SchoolRequiredNotice } from "@/features/questions/components/SchoolRequiredNotice"
+import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "@/features/questions/utils/school-scope"
+import { useQuestionGenerationStore } from "@/features/questions/store/question-generation.store"
+import { useGenerationPolling } from "@/features/questions/hooks/use-generation-polling"
+import { useNotificationStore } from "@/features/notifications/store/notification.store"
+import { getErrorMessage } from "@/lib/http"
 import type { Question, VakStyleApi } from "@/features/questions/interfaces/question.interface"
 import { isThisMonth } from "../utils"
 import { cn } from "@/lib/utils"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const VAK_LABEL: Record<string, string> = {
+  Visual: "Visual",
+  Auditory: "Auditivo",
+  Kinesthetic: "Kinestésico",
+}
+
+/** Batches rapid per-question SSE events into a single reload. */
+const SSE_REFETCH_DEBOUNCE_MS = 1_000
 
 function currentMonthLabel() {
   const s = new Date().toLocaleDateString("es-PE", { month: "long", year: "numeric" })
@@ -93,11 +107,18 @@ export function TeacherDashboardHome() {
   const [loading, setLoading] = useState(true)
 
   const [showModal, setShowModal] = useState(false)
-  const [generating, setGenerating] = useState(false)
   const [justGenerated, setJustGenerated] = useState(false)
+  const startGenerationBatch = useQuestionGenerationStore((s) => s.startBatch)
 
-  useEffect(() => {
-    Promise.all([
+  const lastSSEEvent = useNotificationStore((s) => s.lastSSEEvent)
+  // Events received before this page mounted were already handled elsewhere.
+  const [mountedSSEEvent] = useState(lastSSEEvent)
+  const resyncVersion = useNotificationStore((s) => s.resyncVersion)
+  const mountedResyncVersion = useRef(resyncVersion)
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const loadSummary = useCallback(() => {
+    return Promise.all([
       questionService.listMy({ status: "pending", page: 1, limit: 5 }),
       questionService.listMy({ status: "approved", page: 1, limit: 50 }),
       questionService.listMy({ status: "rejected", page: 1, limit: 50 }),
@@ -109,32 +130,52 @@ export function TeacherDashboardHome() {
         setRejectedThisMonth(r.items.filter((q) => isThisMonth(q.updatedAt)).length)
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    void loadSummary().finally(() => setLoading(false))
+  }, [loadSummary])
+
+  // Generation runs in the background (202) — refresh when SSE reports progress.
+  useEffect(() => {
+    if (!lastSSEEvent || lastSSEEvent === mountedSSEEvent) return
+    const generated = lastSSEEvent.type === "question_generated"
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current)
+    refetchTimerRef.current = setTimeout(() => {
+      if (generated) setJustGenerated(true)
+      void loadSummary()
+    }, SSE_REFETCH_DEBOUNCE_MS)
+  }, [lastSSEEvent, mountedSSEEvent, loadSummary])
+
+  // SSE may be buffered or cut by the proxy: poll while a generation is in flight.
+  useGenerationPolling(() => { void loadSummary() })
+
+  // SSE reconnected — reload in case events were missed during the gap.
+  useEffect(() => {
+    if (resyncVersion === mountedResyncVersion.current) return
+    void loadSummary()
+  }, [resyncVersion, loadSummary])
+
+  useEffect(() => () => {
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current)
   }, [])
 
   async function handleGenerate(count: number, vakStyle: VakStyleApi) {
-    setGenerating(true)
     try {
       await questionService.generateBatch({ count, vakStyle, teacherId: user?.id })
-      toast.success(`${count} preguntas generadas. ¡Revísalas ahora!`)
-      const [p, a, r] = await Promise.all([
-        questionService.listMy({ status: "pending", page: 1, limit: 5 }),
-        questionService.listMy({ status: "approved", page: 1, limit: 50 }),
-        questionService.listMy({ status: "rejected", page: 1, limit: 50 }),
-      ])
-      setPendingQuestions(p.items)
-      setPendingTotal(p.total)
-      setApprovedThisMonth(a.items.filter((q) => isThisMonth(q.updatedAt)).length)
-      setRejectedThisMonth(r.items.filter((q) => isThisMonth(q.updatedAt)).length)
-      setJustGenerated(true)
-    } catch {
-      toast.error("Error al generar las preguntas. Intenta de nuevo.")
-    } finally {
-      setGenerating(false)
+      startGenerationBatch(count)
+      const label = VAK_LABEL[vakStyle] ?? vakStyle
+      toast.info(
+        `Generando ${count} ${count === 1 ? "pregunta" : "preguntas"} ${label}… te avisaremos cuando estén listas.`,
+      )
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al iniciar la generación. Intenta de nuevo."))
     }
   }
 
   const firstName = user?.name?.split(" ")[0] ?? "Profesor"
+  // Questions are generated for the teacher's school — the backend rejects teachers without one.
+  const canGenerate = Boolean(user?.school?.id)
   const monthLabel = currentMonthLabel()
 
   return (
@@ -149,6 +190,12 @@ export function TeacherDashboardHome() {
           Bienvenido, Prof. {firstName}
         </h1>
       </motion.div>
+
+      {!canGenerate && (
+        <motion.div variants={fadeUp}>
+          <SchoolRequiredNotice id="generate-school-required" />
+        </motion.div>
+      )}
 
       {/* ── Stat cards ── */}
       <motion.div variants={fadeUp} className="grid gap-4 tablet:grid-cols-3">
@@ -230,7 +277,10 @@ export function TeacherDashboardHome() {
             <button
               type="button"
               onClick={() => setShowModal(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-6 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90"
+              disabled={!canGenerate}
+              title={canGenerate ? undefined : SCHOOL_REQUIRED_TO_GENERATE_MESSAGE}
+              aria-describedby={canGenerate ? undefined : "generate-school-required"}
+              className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-6 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-mathe-blue"
             >
               <Sparkles className="size-4" />
               Generar preguntas
@@ -288,11 +338,10 @@ export function TeacherDashboardHome() {
       </AnimatePresence>
 
       <GenerateQuestionsModal
-        open={showModal}
+        open={showModal && canGenerate}
         onClose={() => setShowModal(false)}
         onGenerate={handleGenerate}
       />
-      <GeneratingOverlay visible={generating} />
 
     </motion.div>
   )

@@ -13,12 +13,15 @@ import {
   XCircle,
 } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
+import { toast } from "sonner"
 import { ROUTING } from "@/config/constant.config"
 import { questionService } from "../services/question.service"
 import { useQuestionLoaderStore } from "../store/question-loader.store"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
+import { getErrorMessage, isForbiddenError } from "@/lib/http"
+import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope"
 import type { Question } from "../interfaces/question.interface"
 
 // ── VAK helpers ───────────────────────────────────────────────────────────────
@@ -42,15 +45,13 @@ function MediaSection({
   imgError: boolean
   onImgError: () => void
 }) {
+  // Parent keys this component by question id, so `loaded` resets per question.
   const [loaded, setLoaded] = useState(false)
-
-  // Reset loaded state when the question changes
-  useEffect(() => { setLoaded(false) }, [question.id])
 
   const hasMedia = Boolean(question.mediaUrl) && !imgError
 
   return (
-    <div className="relative h-[525px] w-full overflow-hidden rounded-2xl bg-mathe-surface">
+    <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-mathe-surface tablet:h-96 laptop:h-[525px]">
       {hasMedia ? (
         <>
           {/* Skeleton while loading */}
@@ -70,7 +71,7 @@ function MediaSection({
             onLoad={() => setLoaded(true)}
             onError={onImgError}
             className={cn(
-              "h-full w-full rounded-2xl object-cover transition-opacity duration-300",
+              "h-full w-full rounded-2xl object-contain transition-opacity duration-300",
               loaded ? "opacity-100" : "opacity-0",
             )}
           />
@@ -253,7 +254,10 @@ export function QuestionReviewPage() {
     questionService
       .getById(Number(id))
       .then(setQuestion)
-      .catch(() => navigate(ROUTING.DASHBOARD_QUESTIONS))
+      .catch((error) => {
+        if (isForbiddenError(error)) toast.error(QUESTION_OTHER_SCHOOL_MESSAGE)
+        navigate(ROUTING.DASHBOARD_QUESTIONS)
+      })
       .finally(() => setPageLoading(false))
   }, [id, navigate])
 
@@ -285,8 +289,18 @@ export function QuestionReviewPage() {
       } else {
         setShowNoMore(true)
       }
-    } catch {
-      // silent — toast can be added later
+    } catch (error) {
+      if (isForbiddenError(error)) {
+        toast.error(QUESTION_OTHER_SCHOOL_MESSAGE)
+        navigate(ROUTING.DASHBOARD_QUESTIONS)
+        return
+      }
+      toast.error(
+        getErrorMessage(
+          error,
+          mode === "approve" ? "No se pudo aprobar la pregunta." : "No se pudo rechazar la pregunta.",
+        ),
+      )
     } finally {
       setGlobalLoading(false)
     }
@@ -354,6 +368,7 @@ export function QuestionReviewPage() {
               {/* Media — always rendered; shows skeleton/fallback when no URL */}
               <div className="mt-4">
                 <MediaSection
+                  key={question.id}
                   question={question}
                   imgError={imgError}
                   onImgError={() => setImgError(true)}

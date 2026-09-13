@@ -13,6 +13,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+import { isForbiddenError } from "@/lib/http";
+import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope";
 import { ROUTING } from "@/config/constant.config";
 import { questionService } from "../services/question.service";
 import { VakBadge } from "@/features/dashboard/components/VakBadge";
@@ -41,13 +44,13 @@ function MediaSection({
   imgError: boolean;
   onImgError: () => void;
 }) {
+  // Parent keys this component by question id, so `loaded` resets per question.
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => { setLoaded(false); }, [question.id]);
 
   const hasMedia = Boolean(question.mediaUrl) && !imgError;
 
   return (
-    <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-mathe-surface">
+    <div className="relative h-56 w-full overflow-hidden rounded-2xl bg-mathe-surface tablet:h-72">
       {hasMedia ? (
         <>
           <AnimatePresence>
@@ -66,7 +69,7 @@ function MediaSection({
             onLoad={() => setLoaded(true)}
             onError={onImgError}
             className={cn(
-              "h-full w-full rounded-2xl object-cover transition-opacity duration-300",
+              "h-full w-full rounded-2xl object-contain transition-opacity duration-300",
               loaded ? "opacity-100" : "opacity-0",
             )}
           />
@@ -125,26 +128,39 @@ export function ValidationHistoryDetailPage() {
 
   const [question, setQuestion] = useState<Question | null>(null);
   const [siblingIds, setSiblingIds] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [imgError, setImgError] = useState(false);
+  // Loading/image-error state is derived from ids, so a route change resets it without setState in the effect.
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [imgErrorId, setImgErrorId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setImgError(false);
-    setQuestion(null);
+    let ignore = false;
 
     Promise.all([
       questionService.getById(Number(id)),
       questionService.listValidatedHistory({ limit: 100 }),
     ])
       .then(([q, history]) => {
+        if (ignore) return;
         setQuestion(q);
         setSiblingIds(history.items.map((i) => i.id));
       })
-      .catch(() => navigate(ROUTING.DASHBOARD_VALIDATION_HISTORY))
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (ignore) return;
+        if (isForbiddenError(error)) toast.error(QUESTION_OTHER_SCHOOL_MESSAGE);
+        navigate(ROUTING.DASHBOARD_VALIDATION_HISTORY);
+      })
+      .finally(() => {
+        if (!ignore) setLoadedId(id);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, [id, navigate]);
+
+  const loading = loadedId !== id;
+  const imgError = question !== null && imgErrorId === question.id;
 
   const currentIndex = siblingIds.indexOf(Number(id));
   const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1] : null;
@@ -264,9 +280,10 @@ export function ValidationHistoryDetailPage() {
             {/* Media */}
             <div className="mt-4">
               <MediaSection
+                key={question.id}
                 question={question}
                 imgError={imgError}
-                onImgError={() => setImgError(true)}
+                onImgError={() => setImgErrorId(question.id)}
               />
             </div>
 

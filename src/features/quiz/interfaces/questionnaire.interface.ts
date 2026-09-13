@@ -1,7 +1,10 @@
+import type { FeedbackSource } from "@/features/results/interfaces/result.interface"
+
 export interface QuizOption {
   id: number
   text: string
-  vakValue: "V" | "A" | "K"
+  /** Omitted by the backend for students so the quiz can't bias answers. */
+  vakValue?: "V" | "A" | "K"
 }
 
 export interface QuizQuestion {
@@ -38,7 +41,7 @@ export interface QuizCompletionResult {
   isMixedProfile: boolean
   classifierType: string
   aiFeedback: string | null
-  feedbackSource: string | null
+  feedbackSource: FeedbackSource | null
 }
 
 export interface QuizSession {

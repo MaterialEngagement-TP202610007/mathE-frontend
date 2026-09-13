@@ -1,7 +1,7 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 import type { Payload } from "recharts/types/component/DefaultTooltipContent"
-import { cn } from "@/lib/utils"
+import { cn, formatPercent } from "@/lib/utils"
 
 export type ChartConfig = {
   [k in string]: {
@@ -15,6 +15,7 @@ type ChartContextProps = { config: ChartConfig }
 
 const ChartContext = React.createContext<ChartContextProps | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components -- shadcn hook colocated with its provider
 export function useChart() {
   const context = React.useContext(ChartContext)
   if (!context) throw new Error("useChart must be used within a <ChartContainer />")
@@ -71,6 +72,7 @@ export function ChartContainer({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- re-exported Recharts component
 export const ChartTooltip = RechartsPrimitive.Tooltip
 
 export function ChartTooltipContent({
@@ -105,7 +107,7 @@ export function ChartTooltipContent({
             )}
             <span className="text-mathe-muted">{label as React.ReactNode}</span>
             <span className="ml-auto font-semibold text-mathe-ink tabular-nums">
-              {item.value}%
+              {formatPercent(item.value)}
             </span>
           </div>
         )

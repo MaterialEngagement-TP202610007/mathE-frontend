@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Edit2,
   GraduationCap,
-  Hash,
   Loader2,
   Mail,
   MapPin,
@@ -27,8 +26,15 @@ import { ROLE } from "@/config/constant.config"
 import { ACADEMIC_GRADES } from "@/data/academic-grades"
 import { userService } from "@/features/users/services/user.service"
 import type { UpdateProfilePayload } from "@/features/users/interfaces/user.interface"
-import { getSchoolById, type School } from "@/shared/services/school.service"
+import {
+  formatSchoolLabel,
+  formatSchoolLevels,
+  getSchoolById,
+  type School,
+} from "@/shared/services/school.service"
 import { authService } from "@/features/auth/services/auth.service"
+import { PHONE_ERROR_MESSAGE, PHONE_REGEX } from "@/features/auth/schemas/auth.schema"
+import { getErrorMessage } from "@/lib/http"
 
 // ── Animations ───────────────────────────────────────────────────────────────
 
@@ -59,8 +65,13 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+/** Backend dates are ISO timestamps; `<input type="date">` needs `YYYY-MM-DD`. */
+function toDateInputValue(iso: string | null | undefined) {
+  return iso ? iso.slice(0, 10) : ""
+}
+
 function formatBirthDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number)
+  const [y, m, d] = toDateInputValue(iso).split("-").map(Number)
   return new Date(y, m - 1, d).toLocaleDateString("es-PE", {
     day: "numeric",
     month: "long",
@@ -156,6 +167,10 @@ export function ProfilePage() {
   const [editGradeId, setEditGradeId] = useState<number | null>(null)
   const [editSchoolId, setEditSchoolId] = useState<number | null>(null)
   const [editSchoolName, setEditSchoolName] = useState("")
+  const [schoolError, setSchoolError] = useState("")
+
+  // Students and teachers must always belong to a school (the backend rejects clearing it).
+  const requiresSchool = roleId === ROLE.STUDENT || roleId === ROLE.TEACHER
 
   useEffect(() => {
     const schoolId = user?.school?.id
@@ -172,33 +187,52 @@ export function ProfilePage() {
   function openEdit() {
     if (!user) return
     setEditName(user.name)
-    setEditBirthDate(user.birthDate ?? "")
+    setEditBirthDate(toDateInputValue(user.birthDate))
     setEditPhone(user.phoneNumber ?? "")
     setEditGradeId(user.academicGradeId)
     setEditSchoolId(user.school?.id ?? null)
-    setEditSchoolName(school?.cenEdu ?? "")
+    setEditSchoolName(school ? formatSchoolLabel(school) : (user.school?.name ?? ""))
+    setSchoolError("")
     setIsEditing(true)
   }
 
   async function handleSave() {
     if (!user) return
+
+    if (requiresSchool && editSchoolId === null) {
+      setSchoolError("Selecciona tu colegio")
+      return
+    }
+
+    const payload: UpdateProfilePayload = {}
+
+    const trimName = editName.trim()
+    if (trimName && trimName !== user.name) payload.name = trimName
+    if (editBirthDate && editBirthDate !== toDateInputValue(user.birthDate))
+      payload.birthDate = editBirthDate
+    const trimPhone = editPhone.trim()
+    if (trimPhone !== (user.phoneNumber ?? "")) {
+      if (trimPhone && !PHONE_REGEX.test(trimPhone)) {
+        toast.error(PHONE_ERROR_MESSAGE)
+        return
+      }
+      // An empty field clears the stored phone (the backend accepts null).
+      payload.phoneNumber = trimPhone || null
+    }
+    if (editGradeId !== user.academicGradeId)
+      payload.academicGradeId = editGradeId ?? undefined
+    // A school can be changed but never cleared.
+    if (editSchoolId !== null && editSchoolId !== (user.school?.id ?? null))
+      payload.schoolId = editSchoolId
+
+    if (Object.keys(payload).length === 0) {
+      toast.info("No hay cambios para guardar")
+      setIsEditing(false)
+      return
+    }
+
     setIsSaving(true)
     try {
-      const payload: UpdateProfilePayload = {}
-
-      const trimName = editName.trim()
-      if (trimName && trimName !== user.name) payload.name = trimName
-      if (editBirthDate && editBirthDate !== (user.birthDate ?? ""))
-        payload.birthDate = editBirthDate
-      const trimPhone = editPhone.trim()
-      if (trimPhone !== (user.phoneNumber ?? "")) {
-        if (trimPhone) payload.phoneNumber = trimPhone
-      }
-      if (editGradeId !== user.academicGradeId)
-        payload.academicGradeId = editGradeId ?? undefined
-      if (editSchoolId !== (user.school?.id ?? null))
-        payload.schoolId = editSchoolId ?? undefined
-
       await userService.updateProfile(user.id, payload)
       const { user: refreshed } = await authService.me()
       setSession(refreshed)
@@ -213,8 +247,8 @@ export function ProfilePage() {
 
       toast.success("Perfil actualizado correctamente")
       setIsEditing(false)
-    } catch {
-      toast.error("Error al actualizar el perfil. Intenta de nuevo.")
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al actualizar el perfil. Intenta de nuevo."))
     } finally {
       setIsSaving(false)
     }
@@ -323,7 +357,7 @@ export function ProfilePage() {
                   id="edit-phone"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="+51 999 999 999"
+                  placeholder="+51999999999"
                   className="h-11 rounded-pill"
                 />
               </FormField>
@@ -356,8 +390,10 @@ export function ProfilePage() {
                   displayValue={editSchoolName}
                   onSelect={(s) => {
                     setEditSchoolId(s.id)
-                    setEditSchoolName(s.cenEdu)
+                    setEditSchoolName(formatSchoolLabel(s))
+                    setSchoolError("")
                   }}
+                  error={schoolError}
                 />
               </div>
             </div>
@@ -451,7 +487,7 @@ export function ProfilePage() {
 
               {loadingSchool ? (
                 <div className="divide-y divide-mathe-border">
-                  {[0, 1, 2, 3, 4].map((i) => (
+                  {[0, 1, 2, 3].map((i) => (
                     <SkeletonInfoRow key={i} />
                   ))}
                 </div>
@@ -464,8 +500,8 @@ export function ProfilePage() {
                   />
                   <InfoRow
                     icon={<BookOpen className="size-4" />}
-                    label="Nivel"
-                    value={school.level}
+                    label="Niveles"
+                    value={formatSchoolLevels(school.levels) || null}
                   />
                   <InfoRow
                     icon={<MapPin className="size-4" />}
@@ -477,10 +513,14 @@ export function ProfilePage() {
                     label="Dirección"
                     value={school.address}
                   />
+                </div>
+              ) : user.school ? (
+                // Details could not be loaded — still show the name from the session.
+                <div className="divide-y divide-mathe-border">
                   <InfoRow
-                    icon={<Hash className="size-4" />}
-                    label="Código modular"
-                    value={school.codMod}
+                    icon={<Building2 className="size-4" />}
+                    label="Nombre"
+                    value={user.school.name}
                   />
                 </div>
               ) : (

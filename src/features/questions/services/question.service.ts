@@ -3,7 +3,6 @@ import { api } from "@/lib/http"
 import type { PaginatedResponse } from "@/shared/interfaces/pagination.interface"
 import type {
   Question,
-  GenerateQuestionPayload,
   GenerateBatchPayload,
   GenerateBatchResponse,
   RejectQuestionPayload,
@@ -12,11 +11,6 @@ import type {
 } from "../interfaces/question.interface"
 
 export const questionService = {
-  generate: async (payload: GenerateQuestionPayload): Promise<Question> => {
-    const { data } = await api.post<Question>(`${ENDPOINT_SERVER.QUESTIONS}/generate`, payload)
-    return data
-  },
-
   generateBatch: async ({ count, vakStyle, teacherId }: GenerateBatchPayload): Promise<GenerateBatchResponse> => {
     const { data } = await api.post<GenerateBatchResponse>(
       `${ENDPOINT_SERVER.QUESTIONS}/generate`,
@@ -52,9 +46,5 @@ export const questionService = {
   reject: async (id: number, payload: RejectQuestionPayload): Promise<Question> => {
     const { data } = await api.patch<Question>(`${ENDPOINT_SERVER.QUESTIONS}/${id}/reject`, payload)
     return data
-  },
-
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`${ENDPOINT_SERVER.QUESTIONS}/${id}`)
   },
 }

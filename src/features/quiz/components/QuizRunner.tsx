@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import {
   ArrowLeft,
@@ -9,9 +9,10 @@ import {
   TriangleAlert,
 } from "lucide-react"
 import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/http"
 import { cn } from "@/lib/utils"
 import { useQuizStore } from "../store/quiz.store"
-import { questionnaireService } from "../services/questionnaire.service"
+import { completeQuestionnaire, isQuestionnaireAbandoned } from "../utils/complete-questionnaire"
 import { useQuestionBehaviour } from "../hooks/use-question-behaviour"
 import { ProgressBar } from "./ProgressBar"
 import { QuestionCard } from "./QuestionCard"
@@ -25,14 +26,18 @@ type RunnerPhase = "answering" | "review" | "submitting"
 
 interface QuizRunnerProps {
   onComplete: (result: QuizCompletionResult) => void
+  /** The backend reports the questionnaire was abandoned (e.g. from another tab). */
+  onAbandoned: () => void
 }
 
-export function QuizRunner({ onComplete }: QuizRunnerProps) {
+export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
   const session = useQuizStore((s) => s.session)
   const setAnswer = useQuizStore((s) => s.setAnswer)
   const setCurrentIndex = useQuizStore((s) => s.setCurrentIndex)
   const [runnerPhase, setRunnerPhase] = useState<RunnerPhase>("answering")
   const [direction, setDirection] = useState<1 | -1>(1)
+  // Synchronous guard: the phase switch alone can't stop a fast double click.
+  const submittingRef = useRef(false)
 
   const activeQuestionId = session?.questions[session.currentIndex]?.questionId ?? 0
   const { markAnswered, flushCurrent, getBehaviour } = useQuestionBehaviour(activeQuestionId)
@@ -57,6 +62,8 @@ export function QuizRunner({ onComplete }: QuizRunnerProps) {
   }
 
   const handleSubmit = async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     flushCurrent()
     setRunnerPhase("submitting")
     try {
@@ -70,15 +77,23 @@ export function QuizRunner({ onComplete }: QuizRunnerProps) {
         }
       })
 
-      const result = await questionnaireService.submit(questionnaireId, {
+      // Recovers the stored result if the request times out or was already processed.
+      const result = await completeQuestionnaire(questionnaireId, {
         completionPercentage: Math.round((answeredCount / questions.length) * 100),
         answers: answerItems,
       })
 
       toast.success("¡Cuestionario completado!")
       onComplete(result)
-    } catch {
-      toast.error("No se pudo enviar el cuestionario. Intenta de nuevo.")
+    } catch (error) {
+      if (isQuestionnaireAbandoned(error)) {
+        onAbandoned()
+        return
+      }
+      toast.error(
+        getErrorMessage(error, "No se pudo enviar el cuestionario. Intenta de nuevo."),
+      )
+      submittingRef.current = false
       setRunnerPhase("review")
     }
   }
@@ -93,7 +108,7 @@ export function QuizRunner({ onComplete }: QuizRunnerProps) {
           </span>
         </div>
         <p className="text-xl font-bold text-mathe-ink">Enviando cuestionario…</p>
-        <p className="text-sm text-mathe-muted">Esto tomará solo un momento.</p>
+        <p className="text-sm text-mathe-muted">Estamos analizando tus respuestas. Esto puede tardar unos segundos.</p>
       </div>
     )
   }

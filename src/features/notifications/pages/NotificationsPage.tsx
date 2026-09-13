@@ -11,11 +11,13 @@ import {
   ChevronRight,
   CheckCircle2,
   ChartPie,
+  Sparkles,
 } from "lucide-react"
 import { notificationService } from "../services/notification.service"
 import { useNotificationStore } from "../store/notification.store"
 import type { Notification, NotificationType } from "../interfaces/notification.interface"
 import { cn } from "@/lib/utils"
+import { ROUTING } from "@/config/constant.config"
 
 const LIMIT = 10
 
@@ -56,6 +58,7 @@ function formatRelative(iso: string) {
 const TYPE_META: Record<string, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
   result_available: { label: "Resultado disponible", Icon: ChartPie },
   account_activated: { label: "Cuenta activada", Icon: CheckCircle2 },
+  questions_generated: { label: "Preguntas generadas", Icon: Sparkles },
 }
 
 function getTypeMeta(type: NotificationType) {
@@ -231,6 +234,8 @@ export function NotificationsPage() {
   function handleNavigate(n: Notification) {
     if (n.resultId) {
       void navigate(`/dashboard/resultados/${n.resultId}`)
+    } else if (n.type === "questions_generated") {
+      void navigate(ROUTING.DASHBOARD_QUESTIONS)
     }
   }
 

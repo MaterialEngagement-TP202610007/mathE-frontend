@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Bot,
   Calendar,
+  CircleHelp,
   Cpu,
   Download,
   Eye,
@@ -15,7 +16,7 @@ import {
 import { motion } from "motion/react"
 import { Label, Pie, PieChart } from "recharts"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { clampPercent, cn, formatPercent } from "@/lib/utils"
 import {
   ChartContainer,
   ChartTooltip,
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/chart"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { resultService } from "../services/result.service"
-import { toDisplayStyle, VAK_COLORS } from "../utils/vak"
+import { lookupVak, toDisplayStyle, vakColors } from "../utils/vak"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
 
 // ── Static lookup tables ──────────────────────────────────────────────────────
@@ -197,8 +198,8 @@ export function ResultDetailPage() {
   const secondaryDisplay = result.secondaryStyle
     ? toDisplayStyle(result.secondaryStyle)
     : null
-  const IconComponent = STYLE_ICON[result.predominantStyle]
-  const iconBg = STYLE_ICON_BG[result.predominantStyle]
+  const IconComponent = lookupVak(STYLE_ICON, result.predominantStyle, CircleHelp)
+  const iconBg = lookupVak(STYLE_ICON_BG, result.predominantStyle, "bg-mathe-surface text-mathe-muted")
 
   const date = new Date(result.createdAt).toLocaleDateString("es-PE", {
     day: "numeric",
@@ -217,7 +218,7 @@ export function ResultDetailPage() {
   const pieData = STYLES.map((s) => ({
     vakStyle: s,
     label: chartConfig[s].label,
-    value: getProb(result, s),
+    value: clampPercent(getProb(result, s)),
     fill: `var(--color-${s})`,
   }))
 
@@ -278,13 +279,13 @@ export function ResultDetailPage() {
                 <p className="mt-1 text-3xl font-bold text-mathe-blue">
                   {displayStyle}
                   <span className="ml-2 text-2xl font-semibold text-mathe-blue/60">
-                    — {result.predominantConfidence}%
+                    — {formatPercent(result.predominantConfidence)}
                   </span>
                 </p>
               </div>
             </div>
             <p className="mt-5 text-sm leading-relaxed text-mathe-muted">
-              {STYLE_DESCRIPTIONS[result.predominantStyle]}
+              {lookupVak(STYLE_DESCRIPTIONS, result.predominantStyle, "")}
             </p>
           </motion.div>
 
@@ -340,7 +341,7 @@ export function ResultDetailPage() {
                                 y={cy - 6}
                                 style={{ fontSize: "1.35rem", fontWeight: 700, fill: "#1f1f1f" }}
                               >
-                                {result.predominantConfidence}%
+                                {formatPercent(result.predominantConfidence)}
                               </tspan>
                               <tspan
                                 x={cx}
@@ -382,8 +383,8 @@ export function ResultDetailPage() {
               {/* Animated progress bars */}
               <div className="flex flex-1 flex-col gap-5">
                 {STYLES.map((style, idx) => {
-                  const pct = getProb(result, style)
-                  const { text } = VAK_COLORS[style]
+                  const pct = clampPercent(getProb(result, style))
+                  const { text } = vakColors(style)
                   const hex = VAK_HEX[style]
                   return (
                     <div key={style}>
@@ -452,7 +453,7 @@ export function ResultDetailPage() {
                     Gemini AI
                   </span>
                 )}
-                {result.feedbackSource === "fallback" && (
+                {result.feedbackSource === "predefined" && (
                   <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
                     <Bot className="size-3" />
                     Respuesta estándar
@@ -487,7 +488,7 @@ export function ResultDetailPage() {
                 value={
                   result.feedbackSource === "gemini"
                     ? "Google Gemini"
-                    : "Respuesta de reserva"
+                    : "Respuesta estándar"
                 }
               />
             )}

@@ -9,9 +9,11 @@ export type QuizAvailability =
 interface QuizStatusState {
   availability: QuizAvailability
   setAvailability: (a: QuizAvailability) => void
+  reset: () => void
 }
 
 export const useQuizStatusStore = create<QuizStatusState>((set) => ({
   availability: "checking",
   setAvailability: (availability) => set({ availability }),
+  reset: () => set({ availability: "checking" }),
 }))

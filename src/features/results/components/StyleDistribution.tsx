@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils"
+import { clampPercent, cn } from "@/lib/utils"
 import type { VakStyleApi } from "../interfaces/result.interface"
-import { toDisplayStyle, VAK_COLORS } from "../utils/vak"
+import { toDisplayStyle, vakColors } from "../utils/vak"
 
 interface ResultProbabilities {
   visualProbability: number
@@ -30,8 +30,8 @@ export function StyleDistribution({ result }: StyleDistributionProps) {
       </p>
       <div className="grid gap-4">
         {STYLES.map((style) => {
-          const pct = getProb(result, style)
-          const { bar, text } = VAK_COLORS[style]
+          const pct = clampPercent(getProb(result, style))
+          const { bar, text } = vakColors(style)
           return (
             <div key={style} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-3">
               <span className={cn("text-sm font-semibold", text)}>

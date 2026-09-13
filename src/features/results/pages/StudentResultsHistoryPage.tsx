@@ -51,7 +51,7 @@ import type {
   UserResultStats,
   UserEvolutionResult,
 } from "../interfaces/stats.interface";
-import { cn } from "@/lib/utils";
+import { cn, formatPercent } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -262,10 +262,12 @@ export function StudentResultsHistoryPage() {
   const [studentLoading, setStudentLoading] = useState(true);
 
   const [stats, setStats] = useState<UserResultStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
+  // Each loading flag is derived from the request key it last completed, so a
+  // key change (student, granularity, filters) shows the skeleton without setState in effects.
+  const [statsLoadedKey, setStatsLoadedKey] = useState<number | null>(null);
 
   const [evolution, setEvolution] = useState<UserEvolutionResult | null>(null);
-  const [evolutionLoading, setEvolutionLoading] = useState(true);
+  const [evolutionLoadedKey, setEvolutionLoadedKey] = useState<string | null>(null);
   const [selectedGranularity, setSelectedGranularity] = useState<
     Granularity | undefined
   >(undefined);
@@ -274,11 +276,14 @@ export function StudentResultsHistoryPage() {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [resultsTotal, setResultsTotal] = useState(0);
   const [resultsPage, setResultsPage] = useState(1);
-  const [resultsLoading, setResultsLoading] = useState(true);
+  const [resultsLoadedKey, setResultsLoadedKey] = useState<string | null>(null);
   const [filterStartDate, setFilterStartDate] = useState("");
   const [filterEndDate, setFilterEndDate] = useState("");
   const [filterStyle, setFilterStyle] = useState<string>("");
   const [filterClassifier, setFilterClassifier] = useState<string>("");
+
+  const evolutionKey = `${id}|${selectedGranularity ?? ""}`;
+  const resultsKey = [id, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier].join("|");
 
   useEffect(() => {
     if (!id) return;
@@ -291,27 +296,26 @@ export function StudentResultsHistoryPage() {
 
   useEffect(() => {
     if (!id) return;
-    setStatsLoading(true);
     resultService
       .getUserStats(id)
       .then(setStats)
       .catch(() => setStats(null))
-      .finally(() => setStatsLoading(false));
+      .finally(() => setStatsLoadedKey(id));
   }, [id]);
 
   useEffect(() => {
     if (!id) return;
-    setEvolutionLoading(true);
+    const key = evolutionKey;
     resultService
       .getEvolution(id, { granularity: selectedGranularity })
       .then(setEvolution)
       .catch(() => setEvolution(null))
-      .finally(() => setEvolutionLoading(false));
-  }, [id, selectedGranularity]);
+      .finally(() => setEvolutionLoadedKey(key));
+  }, [id, selectedGranularity, evolutionKey]);
 
   useEffect(() => {
     if (!id) return;
-    setResultsLoading(true);
+    const key = resultsKey;
     resultService
       .listByStudent(id, {
         page: resultsPage,
@@ -326,13 +330,17 @@ export function StudentResultsHistoryPage() {
         setResultsTotal(res.total);
       })
       .catch(() => setResults([]))
-      .finally(() => setResultsLoading(false));
-  }, [id, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier]);
+      .finally(() => setResultsLoadedKey(key));
+  }, [id, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier, resultsKey]);
+
+  const statsLoading = statsLoadedKey !== id;
+  const evolutionLoading = evolutionLoadedKey !== evolutionKey;
+  const resultsLoading = resultsLoadedKey !== resultsKey;
 
   const initials = student ? getInitials(student.name) : "?";
   const grade = gradeName(student?.academicGradeId ?? null);
   const predominantMeta = stats?.predominantStyle
-    ? STYLE_META[stats.predominantStyle]
+    ? (STYLE_META[stats.predominantStyle] ?? null)
     : null;
 
   const chartData =
@@ -907,7 +915,7 @@ export function StudentResultsHistoryPage() {
                     <td className="px-5 py-4">
                       {r.predominantConfidence != null ? (
                         <span className="text-sm font-bold tabular-nums text-mathe-ink">
-                          {r.predominantConfidence.toFixed(1)}%
+                          {formatPercent(r.predominantConfidence, 1)}
                         </span>
                       ) : (
                         <span className="text-sm text-mathe-muted">—</span>

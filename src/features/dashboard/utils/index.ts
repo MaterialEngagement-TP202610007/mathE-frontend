@@ -1,13 +1,10 @@
 import type { VakStyleApi } from "@/features/results/interfaces/result.interface"
+import { toDisplayStyle } from "@/features/results/utils/vak"
 import type { VakStyle } from "../components/VakBadge"
 
-export function toSpanishStyle(vakStyle: VakStyleApi): VakStyle {
-  const map: Record<VakStyleApi, VakStyle> = {
-    Visual: "Visual",
-    Auditory: "Auditivo",
-    Kinesthetic: "Kinestésico",
-  }
-  return map[vakStyle]
+/** Spanish label for a VAK style; unknown/missing styles get a neutral fallback. */
+export function toSpanishStyle(vakStyle: VakStyleApi | string | null | undefined): VakStyle {
+  return toDisplayStyle(vakStyle)
 }
 
 export function formatQuestionId(id: number) {

@@ -71,8 +71,8 @@ export function ResultPage() {
   if (!result) return null
 
   const displayStyle = toDisplayStyle(result.predominantStyle)
-  const iconClass = STYLE_ICON_CLASS[result.predominantStyle]
-  const svgIcon = STYLE_SVG[result.predominantStyle]
+  const iconClass = STYLE_ICON_CLASS[result.predominantStyle] ?? "bg-mathe-surface text-mathe-muted"
+  const svgIcon = STYLE_SVG[result.predominantStyle] ?? null
   const detailUrl = `/dashboard/resultados/${result.id}`
 
   const container = {

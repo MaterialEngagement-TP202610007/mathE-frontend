@@ -1,4 +1,9 @@
-export type NotificationType = "result_available" | "account_activated" | string
+// `string` keeps unknown future types renderable with a generic label.
+export type NotificationType =
+  | "result_available"
+  | "account_activated"
+  | "questions_generated"
+  | (string & {})
 
 export interface Notification {
   id: number

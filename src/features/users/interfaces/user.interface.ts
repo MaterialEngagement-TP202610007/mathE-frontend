@@ -13,10 +13,34 @@ export interface User {
   deletedAt: string | null
 }
 
+export interface UserSchoolRef {
+  id: number
+  name: string | null
+}
+
+/** Item of `GET /users/teachers`: flat `schoolId` plus the nested school reference. */
+export interface TeacherListItem extends User {
+  school?: UserSchoolRef | null
+  /** Legacy flat school name, used as a fallback when `school` is absent. */
+  schoolName?: string | null
+}
+
+export interface TeacherListFilters {
+  page?: number
+  limit?: number
+  isActive?: boolean
+}
+
+export interface ActivateUserResponse {
+  message: string
+  user: User
+}
+
 export interface UpdateProfilePayload {
   name?: string
   birthDate?: string
-  phoneNumber?: string
+  /** `null` clears the stored phone number. */
+  phoneNumber?: string | null
   academicGradeId?: number
   schoolId?: number
 }

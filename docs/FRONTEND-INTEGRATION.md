@@ -43,7 +43,7 @@ Numeric role ids (kept in sync with the DB seed):
 - Some routes are **self-or-admin**: a user may act on their own `:id`, otherwise admin role required (e.g. `GET /api/users/:id`, `PUT /api/users/:id`).
 
 ### Account activation gotcha
-On register, **students are created `isActive=false`** and **cannot log in** until an admin activates them (`PATCH /api/users/:id/activate`). Teachers/Admins are active immediately. Surface this in the registration UX: after a student signs up, show "pending activation" — login will fail with `401` until activated.
+On register, **students are active immediately** and can log in right away. **Teachers are created `isActive=false`** and **cannot log in** until an admin approves them (`PATCH /api/users/:id/activate`, admin only, teacher targets only). Surface this in the registration UX: after a teacher signs up, show "pending approval" — login fails with `401` `"Account is inactive. Your teacher account is pending administrator approval."` until approved.
 
 ---
 
@@ -301,12 +301,12 @@ Legend: 🔓 public · 🔑 auth required · roles in parentheses.
 |--------|------|-------|-------|
 | GET | `/` | Admin | paginated all users |
 | GET | `/students` | Admin, Teacher | paginated students |
-| GET | `/teachers` | Admin | paginated teachers |
+| GET | `/teachers` | Admin | paginated teachers (`?isActive=true\|false`); items add `school: {id, name} \| null` |
 | GET | `/students/by-school/:schoolId` | Admin, Teacher | paginated |
 | GET | `/:id` | Admin **or self** | single user |
 | PUT | `/:id` | Admin **or self** | update profile (body below) |
 | DELETE | `/:id` | Admin | soft-delete → `{message, user}` |
-| PATCH | `/:id/activate` | Admin | activate inactive user → `{message, user}` |
+| PATCH | `/:id/activate` | Admin | approve a pending teacher → `{message, user}`; non-teacher target → `400` |
 
 Update profile body (all optional, ≥1 required):
 ```json
@@ -469,10 +469,11 @@ Only **approved** questions are eligible to appear in student questionnaires (wi
 
 ### C. Admin onboarding
 ```
-1. Student self-registers (roleId=3) → created inactive.
-2. Admin lists pending: GET /api/users/students
-3. Admin activates: PATCH /api/users/:id/activate
-   → creates a notification for the student; they can now log in.
+1. Student self-registers (roleId=3) → active, can log in immediately.
+2. Teacher self-registers (roleId=2) → created inactive.
+3. Admin lists pending teachers: GET /api/users/teachers?isActive=false
+4. Admin approves: PATCH /api/users/:id/activate
+   → the teacher can now log in.
 ```
 
 ### D. Teacher reviews results & builds ground truth (pilot)

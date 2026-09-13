@@ -3,14 +3,14 @@
   publish   = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # API proxy — forwards /api/* to Render backend keeping everything same-origin.
 # Must be declared BEFORE the SPA catch-all below.
 # This bypasses cross-site cookie restrictions (SameSite) entirely.
 [[redirects]]
   from   = "/api/*"
-  to     = "https://mathe-backend-1cqc.onrender.com/api/:splat"
+  to     = "https://mathe-backend-kovc.onrender.com/api/:splat"
   status = 200
   force  = true
 
