@@ -28,11 +28,6 @@ export interface Question {
   options: QuestionOption[]
 }
 
-export interface GenerateQuestionPayload {
-  vakStyle: VakStyleApi
-  teacherId?: number | null
-}
-
 export interface GenerateBatchPayload {
   count: number
   vakStyle: VakStyleApi

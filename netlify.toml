@@ -3,7 +3,7 @@
   publish   = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # API proxy — forwards /api/* to Render backend keeping everything same-origin.
 # Must be declared BEFORE the SPA catch-all below.

@@ -47,7 +47,7 @@ import { ROUTING } from "@/config/constant.config";
 import type { SchoolStats, GradeStats } from "../interfaces/stats.interface";
 import type { QuizResult } from "../interfaces/result.interface";
 import type { User } from "@/features/users/interfaces/user.interface";
-import { cn } from "@/lib/utils";
+import { cn, formatPercent } from "@/lib/utils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -518,6 +518,32 @@ export function ReportsPage() {
     Math.ceil(resultsTotal / RESULTS_PAGE_SIZE),
   );
 
+  // Nothing can be fetched without a school — show an empty state instead of endless skeletons.
+  if (!schoolId) {
+    return (
+      <motion.div className="grid gap-6" initial="hidden" animate="show" variants={stagger}>
+        <motion.div variants={fadeUp}>
+          <h1 className="text-3xl font-bold text-mathe-ink">Reporte de resultados</h1>
+        </motion.div>
+        <motion.div
+          variants={fadeUp}
+          className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-mathe-border bg-mathe-surface py-16 text-center"
+        >
+          <span className="grid size-14 place-items-center rounded-2xl bg-mathe-white shadow-sm">
+            <ClipboardList className="size-7 text-mathe-muted" />
+          </span>
+          <div>
+            <p className="font-semibold text-mathe-ink">Sin institución asociada</p>
+            <p className="mt-1 max-w-md text-sm text-mathe-muted">
+              Tu cuenta no tiene una institución asociada, por lo que no hay reportes para mostrar.
+              Contacta a un administrador.
+            </p>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       className="grid gap-6"
@@ -880,7 +906,7 @@ export function ReportsPage() {
                       {/* Confidence */}
                       <td className="px-3 py-4">
                         <span className="text-sm font-bold tabular-nums text-mathe-ink">
-                          {r.predominantConfidence.toFixed(1)}%
+                          {formatPercent(r.predominantConfidence, 1)}
                         </span>
                       </td>
                       {/* Date */}

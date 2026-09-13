@@ -4,7 +4,8 @@ import { Bell, Brain, Info, Sparkles, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { VakStyleApi } from "../interfaces/question.interface"
 
-const COUNTS = [5, 10, 15, 20]
+/** Backend accepts an integer count between 1 and 10. */
+const COUNTS = [1, 3, 5, 10]
 
 const VAK_OPTIONS: { value: VakStyleApi; label: string; color: string; active: string }[] = [
   { value: "Visual",      label: "Visual",      color: "border-violet-200 text-violet-600 hover:border-violet-400", active: "border-violet-500 bg-violet-500 text-white shadow-sm" },
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export function GenerateQuestionsModal({ open, onClose, onGenerate }: Props) {
-  const [count, setCount] = useState(10)
+  const [count, setCount] = useState(3)
   const [vakStyle, setVakStyle] = useState<VakStyleApi>("Visual")
 
   function handleGenerate() {

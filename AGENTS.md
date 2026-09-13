@@ -52,9 +52,9 @@ do not assume the app runs as-is:
 - `src/config/constant.config.ts` — enums for routes (`ROUTING`), backend endpoints
   (`ENDPOINT_SERVER`), and responsive `BREAKPOINTS` (mobile 475 / tablet 744 / laptop 1232 /
   desktop 1440). Add new route paths and endpoint strings here, not inline.
-- Env: `.env` defines `VITE_BASE_URL` (e.g. `http://localhost:3000/api`); `.env.example` is the
-  template. Note `docs/FRONTEND-INTEGRATION.md` sample code uses `VITE_API_URL` — reconcile the
-  name when implementing the API client.
+- Env: the only variable is `VITE_API_URL` (backend host, no `/api` suffix; see
+  `src/config/env.config.ts` and `.env.example`). It must stay **unset** on Netlify: `/api/*` is
+  proxied same-origin to the backend (`netlify.toml`), which the cookie-based auth relies on.
 - Auth/RBAC (per integration guide): JWT Bearer token in `Authorization` header, stored
   client-side. Role ids are integers — `1` Admin, `2` Teacher, `3` Student. On any `401`, clear
   the token and redirect to login. Decode the JWT for routing/guards only — never trust it for

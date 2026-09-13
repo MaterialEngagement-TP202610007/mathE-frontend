@@ -12,8 +12,11 @@ import type { Question, VakStyleApi } from "../interfaces/question.interface"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
+import { getErrorMessage } from "@/lib/http"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
+import { useQuestionGenerationStore } from "../store/question-generation.store"
+import { useGenerationPolling } from "../hooks/use-generation-polling"
 
 const PAGE_SIZE = 10
 
@@ -110,6 +113,8 @@ export function PendingQuestionsPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const lastSSEEvent = useNotificationStore((s) => s.lastSSEEvent)
+  const resyncVersion = useNotificationStore((s) => s.resyncVersion)
+  const mountedResyncVersion = useRef(resyncVersion)
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
@@ -120,6 +125,7 @@ export function PendingQuestionsPage() {
   const [page, setPage] = useState(1)
 
   const [showModal, setShowModal] = useState(false)
+  const startGenerationBatch = useQuestionGenerationStore((s) => s.startBatch)
 
   function fetchPending() {
     questionService
@@ -130,6 +136,14 @@ export function PendingQuestionsPage() {
   }
 
   useEffect(() => { fetchPending() }, [])
+
+  // SSE may be buffered or cut by the proxy: poll while a generation is in flight.
+  useGenerationPolling(() => {
+    questionService
+      .listMy({ status: "pending", page: 1, limit: 100 })
+      .then((res) => setAllQuestions(res.items))
+      .catch(() => {})
+  })
 
   // Debounced refetch — each question_generated fires individually so we batch
   // all rapid-fire events into one list reload 1 s after the last one arrives.
@@ -146,6 +160,19 @@ export function PendingQuestionsPage() {
         .catch(() => {})
     }, 1000)
   }, [lastSSEEvent])
+
+  // SSE reconnected — questions generated during the gap produced no event, so reload.
+  useEffect(() => {
+    if (resyncVersion === mountedResyncVersion.current) return
+    questionService
+      .listMy({ status: "pending", page: 1, limit: 100 })
+      .then((res) => setAllQuestions(res.items))
+      .catch(() => {})
+  }, [resyncVersion])
+
+  useEffect(() => () => {
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current)
+  }, [])
 
   function handleVakFilter(v: VakFilter) {
     setVakFilter(v)
@@ -171,10 +198,11 @@ export function PendingQuestionsPage() {
   async function handleGenerate(count: number, vakStyle: VakStyleApi) {
     try {
       await questionService.generateBatch({ count, vakStyle, teacherId: user?.id })
+      startGenerationBatch(count)
       const label = VAK_LABEL[vakStyle] ?? vakStyle
       toast.info(`Generando ${count} preguntas ${label}… recibirás una notificación cuando estén listas.`)
-    } catch {
-      toast.error("Error al iniciar la generación. Intenta de nuevo.")
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al iniciar la generación. Intenta de nuevo."))
     }
   }
 

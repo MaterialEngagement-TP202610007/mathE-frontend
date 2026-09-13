@@ -26,7 +26,7 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
 
       {/* Fixed-height media container — always rendered when question has mediaUrl */}
       {hasMedia && (
-        <div className="relative mt-4 overflow-hidden rounded-2xl bg-mathe-surface h-[525px]">
+        <div className="relative mt-4 h-64 overflow-hidden rounded-2xl bg-mathe-surface tablet:h-96 laptop:h-[525px]">
           {showImage ? (
             <>
               {!imgLoaded && (
@@ -38,7 +38,7 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
                 onLoad={() => setImgLoaded(true)}
                 onError={() => setImgError(true)}
                 className={cn(
-                  "h-full w-full rounded-2xl object-cover transition-opacity duration-300",
+                  "h-full w-full rounded-2xl object-contain transition-opacity duration-300",
                   imgLoaded ? "opacity-100" : "opacity-0",
                 )}
               />

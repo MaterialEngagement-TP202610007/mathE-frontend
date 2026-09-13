@@ -2,7 +2,8 @@ import { motion, AnimatePresence } from "motion/react"
 import { Bot, Brain, X } from "lucide-react"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toDisplayStyle } from "../utils/vak"
-import type { QuizResult } from "../interfaces/result.interface"
+import { clampPercent, formatPercent } from "@/lib/utils"
+import type { ProfileType, QuizResult } from "../interfaces/result.interface"
 import type { User } from "@/features/users/interfaces/user.interface"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -22,14 +23,14 @@ function ProbBar({ label, value, color }: { label: string; value: number; color:
     <div className="grid gap-1">
       <div className="flex items-center justify-between text-xs">
         <span className="text-mathe-muted">{label}</span>
-        <span className="font-semibold tabular-nums text-mathe-ink">{value.toFixed(1)}%</span>
+        <span className="font-semibold tabular-nums text-mathe-ink">{formatPercent(value, 1)}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-mathe-border/40">
         <motion.div
           className="h-full rounded-full"
           style={{ backgroundColor: color }}
           initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
+          animate={{ width: `${clampPercent(value)}%` }}
           transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
         />
       </div>
@@ -51,11 +52,10 @@ const CLASSIFIER_LABEL: Record<string, string> = {
   simple_score: "Score simple",
 }
 
-const PROFILE_LABEL: Record<string, string> = {
+const PROFILE_LABEL: Record<ProfileType, string> = {
   clear:     "Claro",
   tendency:  "Tendencia",
   mixed:     "Mixto",
-  dominant:  "Dominante",
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -139,8 +139,8 @@ export function ResultDetailModal({ open, onClose, result, student }: Props) {
 
                 {/* Metadata */}
                 <div className="divide-y divide-mathe-border/60 rounded-xl bg-mathe-surface px-4">
-                  <InfoRow label="Confianza predominante" value={`${result.predominantConfidence.toFixed(1)}%`} />
-                  <InfoRow label="Tipo de perfil"         value={PROFILE_LABEL[result.profileType] ?? result.profileType} />
+                  <InfoRow label="Confianza predominante" value={formatPercent(result.predominantConfidence, 1)} />
+                  <InfoRow label="Tipo de perfil"         value={result.profileType ? (PROFILE_LABEL[result.profileType] ?? result.profileType) : "—"} />
                   <InfoRow label="Clasificador"           value={CLASSIFIER_LABEL[result.classifierType] ?? result.classifierType} />
                   {result.secondaryStyle && (
                     <InfoRow

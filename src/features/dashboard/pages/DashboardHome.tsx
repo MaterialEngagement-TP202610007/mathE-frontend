@@ -21,11 +21,11 @@ import { useQuizStore } from "@/features/quiz/store/quiz.store"
 import { useQuizStatusStore } from "@/features/quiz/store/quiz-status.store"
 import { questionnaireService } from "@/features/quiz/services/questionnaire.service"
 import { resultService } from "@/features/results/services/result.service"
-import { toDisplayStyle, VAK_COLORS } from "@/features/results/utils/vak"
+import { toDisplayStyle, vakColors } from "@/features/results/utils/vak"
 import { ACADEMIC_GRADES } from "@/data/academic-grades"
-import { cn } from "@/lib/utils"
+import { clampPercent, cn, formatPercent } from "@/lib/utils"
 import { Avatar } from "../components/Avatar"
-import { VakBadge, type VakStyle } from "../components/VakBadge"
+import { VakBadge } from "../components/VakBadge"
 import { TeacherDashboardHome } from "./TeacherDashboardHome"
 import type { QuizResult } from "@/features/results/interfaces/result.interface"
 
@@ -111,9 +111,9 @@ function StatCard({
 function VakMiniBar({ v, a, k }: { v: number; a: number; k: number }) {
   return (
     <div className="flex h-1.5 w-24 overflow-hidden rounded-full">
-      <div className="bg-mathe-blue" style={{ width: `${v}%` }} />
-      <div className="bg-emerald-500" style={{ width: `${a}%` }} />
-      <div className="bg-amber-500" style={{ width: `${k}%` }} />
+      <div className="bg-mathe-blue" style={{ width: `${clampPercent(v)}%` }} />
+      <div className="bg-emerald-500" style={{ width: `${clampPercent(a)}%` }} />
+      <div className="bg-amber-500" style={{ width: `${clampPercent(k)}%` }} />
     </div>
   )
 }
@@ -175,6 +175,7 @@ export function DashboardHome() {
 
   const name = user?.name ?? "Estudiante"
   const grade = ACADEMIC_GRADES.find((g) => g.id === user?.academicGradeId)
+  const schoolName = user?.school?.name ?? "Sin institución asociada"
   const latest = results[0] ?? null
   const answeredCount = Object.keys(quizSession?.answers ?? {}).length
   const totalQuestions = quizSession?.questions.length ?? 10
@@ -193,10 +194,10 @@ export function DashboardHome() {
           <Avatar name={name} className="bg-mathe-white/15 text-lg text-mathe-white" />
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-mathe-white/70">
-              Bienvenida de vuelta
+              Te damos la bienvenida
             </p>
             <h1 className="mt-1 text-3xl font-bold">{name}</h1>
-            <p className="mt-2 text-mathe-white/80">Colegio Claretiano</p>
+            <p className="mt-2 text-mathe-white/80">{schoolName}</p>
             {grade && <p className="text-mathe-white/80">{grade.name}</p>}
           </div>
 
@@ -260,7 +261,7 @@ export function DashboardHome() {
           <StatCard
             label="Último estilo"
             value={latest ? toDisplayStyle(latest.predominantStyle) : "—"}
-            hint={latest ? `${latest.predominantConfidence}% confianza` : "Sin evaluaciones"}
+            hint={latest ? `${formatPercent(latest.predominantConfidence)} confianza` : "Sin evaluaciones"}
             icon={<Sparkles className="size-4" />}
             accent
             loading={loadingResults}
@@ -316,7 +317,7 @@ export function DashboardHome() {
                 <div className="h-2 w-24 overflow-hidden rounded-full bg-mathe-border">
                   <div
                     className="h-full rounded-full bg-mathe-blue transition-all"
-                    style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
+                    style={{ width: `${clampPercent((answeredCount / totalQuestions) * 100)}%` }}
                   />
                 </div>
               )}
@@ -384,7 +385,7 @@ export function DashboardHome() {
           <div className="grid gap-3">
             {results.map((r, idx) => {
               const display = toDisplayStyle(r.predominantStyle)
-              const { text } = VAK_COLORS[r.predominantStyle]
+              const { text } = vakColors(r.predominantStyle)
               return (
                 <motion.button
                   key={r.id}
@@ -416,11 +417,11 @@ export function DashboardHome() {
                   </div>
 
                   {/* Badge */}
-                  <VakBadge style={display as VakStyle} />
+                  <VakBadge style={display} />
 
                   {/* Confidence */}
                   <span className={cn("text-sm font-bold tabular-nums", text)}>
-                    {r.predominantConfidence}%
+                    {formatPercent(r.predominantConfidence)}
                   </span>
 
                   {/* Mini VAK bar */}
@@ -431,7 +432,7 @@ export function DashboardHome() {
                       k={r.kinestheticProbability}
                     />
                     <span className="text-xs text-mathe-muted">
-                      V{r.visualProbability} A{r.auditoryProbability} K{r.kinestheticProbability}
+                      V{clampPercent(r.visualProbability)} A{clampPercent(r.auditoryProbability)} K{clampPercent(r.kinestheticProbability)}
                     </span>
                   </div>
 

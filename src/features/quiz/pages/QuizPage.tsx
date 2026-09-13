@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, useBlocker } from "react-router"
 import { X } from "lucide-react"
+import { toast } from "sonner"
 import { ROUTING } from "@/config/constant.config"
+import { HttpError, getErrorMessage } from "@/lib/http"
 import { MatheLogo } from "@/shared/components/icons/MatheLogo"
 import { useQuizIntroStore } from "../store/quiz-intro.store"
 import { useQuizStore } from "../store/quiz.store"
@@ -24,6 +26,7 @@ type Phase = "checking" | "generating" | "ready" | "questions" | "result"
 
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
+  const resetQuizIntro = useQuizIntroStore((s) => s.reset)
   const navigate = useNavigate()
   const { startSession, clearSession } = useQuizStore()
 
@@ -31,6 +34,8 @@ export function QuizPage() {
   const [manualAbandon, setManualAbandon] = useState(false)
   const [quizResult, setQuizResult] = useState<QuizCompletionResult | null>(null)
   const abandonedRef = useRef(false)
+  // Guards against a duplicate POST when effects re-run (e.g. React StrictMode).
+  const createStartedRef = useRef(false)
 
   // ── Navigation blocker (only active while answering) ─────────
   const blocker = useBlocker(
@@ -68,20 +73,50 @@ export function QuizPage() {
         startSession(data)
         setPhase("questions")
       })
-      .catch(() => navigate(ROUTING.DASHBOARD, { replace: true }))
+      .catch((error: unknown) => {
+        if (error instanceof HttpError && error.status === 404) {
+          toast.info("No tienes un cuestionario en progreso. Inicia uno desde tu panel.")
+        } else {
+          toast.error(getErrorMessage(error, "No se pudo cargar el cuestionario."))
+        }
+        navigate(ROUTING.DASHBOARD, { replace: true })
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Create questionnaire once generating phase is entered ────
   useEffect(() => {
-    if (phase !== "generating") return
+    if (phase !== "generating" || createStartedRef.current) return
+    createStartedRef.current = true
     questionnaireService
       .create()
       .then((data) => {
         startSession(data)
         setPhase("ready")
       })
-      .catch(() => navigate(ROUTING.DASHBOARD, { replace: true }))
+      .catch(async (error: unknown) => {
+        const hasActive =
+          error instanceof HttpError &&
+          (error.status === 409 ||
+            /active questionnaire/i.test(error.serverMessage ?? ""))
+
+        if (hasActive) {
+          // Resume the questionnaire that is already in progress instead of failing.
+          try {
+            startSession(await questionnaireService.getActive())
+            toast.info("Ya tenías un cuestionario en progreso. Puedes continuar donde lo dejaste.")
+            setPhase("questions")
+            return
+          } catch {
+            // fall through to the generic error below
+          }
+        }
+
+        toast.error(getErrorMessage(error, "No se pudo generar el cuestionario. Intenta de nuevo."))
+        navigate(ROUTING.DASHBOARD, { replace: true })
+      })
+      // Consent is single-use: returning to /cuestionario must not create another questionnaire.
+      .finally(() => resetQuizIntro())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
@@ -101,6 +136,7 @@ export function QuizPage() {
     }
 
     clearSession()
+    resetQuizIntro()
     setManualAbandon(false)
     if (blocker.state === "blocked") blocker.reset()
     navigate(ROUTING.DASHBOARD, { replace: true })
@@ -113,8 +149,18 @@ export function QuizPage() {
 
   const handleComplete = (result: QuizCompletionResult) => {
     clearSession()
+    resetQuizIntro()
     setQuizResult(result)
     setPhase("result")
+  }
+
+  // The questionnaire was abandoned server-side (e.g. from another tab): the local session is stale.
+  const handleAbandonedRemotely = () => {
+    abandonedRef.current = true
+    clearSession()
+    resetQuizIntro()
+    toast.info("Este cuestionario fue abandonado y ya no puede enviarse. Puedes iniciar uno nuevo desde tu panel.")
+    navigate(ROUTING.DASHBOARD, { replace: true })
   }
 
   const isResult = phase === "result"
@@ -147,7 +193,7 @@ export function QuizPage() {
         {isResult && quizResult ? (
           <ResultSummary result={quizResult} />
         ) : phase === "questions" ? (
-          <QuizRunner onComplete={handleComplete} />
+          <QuizRunner onComplete={handleComplete} onAbandoned={handleAbandonedRemotely} />
         ) : (
           <GeneratingQuiz
             ready={phase === "ready"}

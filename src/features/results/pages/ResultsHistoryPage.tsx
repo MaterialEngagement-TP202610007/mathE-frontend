@@ -13,10 +13,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { ROUTING } from "@/config/constant.config"
 import { resultService, type MyResultsParams } from "../services/result.service"
-import { toDisplayStyle, VAK_COLORS } from "../utils/vak"
-import { VakBadge, type VakStyle } from "@/features/dashboard/components/VakBadge"
+import { toDisplayStyle, vakColors } from "../utils/vak"
+import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
-import { cn } from "@/lib/utils"
+import { clampPercent, cn, formatPercent } from "@/lib/utils"
 
 const LIMIT = 8
 
@@ -76,9 +76,9 @@ function SkeletonRow() {
 function VakMiniBar({ v, a, k }: { v: number; a: number; k: number }) {
   return (
     <div className="flex h-1.5 w-20 overflow-hidden rounded-full">
-      <div className="bg-mathe-blue" style={{ width: `${v}%` }} />
-      <div className="bg-emerald-500" style={{ width: `${a}%` }} />
-      <div className="bg-amber-500" style={{ width: `${k}%` }} />
+      <div className="bg-mathe-blue" style={{ width: `${clampPercent(v)}%` }} />
+      <div className="bg-emerald-500" style={{ width: `${clampPercent(a)}%` }} />
+      <div className="bg-amber-500" style={{ width: `${clampPercent(k)}%` }} />
     </div>
   )
 }
@@ -242,7 +242,7 @@ export function ResultsHistoryPage() {
             {total === 0
               ? "Sin resultados"
               : `${total} resultado${total !== 1 ? "s" : ""} encontrado${total !== 1 ? "s" : ""}`}
-            {styleFilter && ` · Estilo: ${toDisplayStyle(styleFilter as VakStyleApi)}`}
+            {styleFilter && ` · Estilo: ${toDisplayStyle(styleFilter)}`}
           </p>
         )}
       </motion.div>
@@ -284,7 +284,7 @@ export function ResultsHistoryPage() {
           <motion.div className="grid gap-3" initial="hidden" animate="show" variants={stagger}>
             {results.map((r) => {
               const display = toDisplayStyle(r.predominantStyle)
-              const { text } = VAK_COLORS[r.predominantStyle]
+              const { text } = vakColors(r.predominantStyle)
               return (
                 <motion.button
                   key={r.id}
@@ -306,9 +306,9 @@ export function ResultsHistoryPage() {
                     <p className="text-xs text-mathe-muted">{formatTime(r.createdAt)}</p>
                     {/* Mobile inline row */}
                     <div className="mt-2 flex flex-wrap items-center gap-2 tablet:hidden">
-                      <VakBadge style={display as VakStyle} />
+                      <VakBadge style={display} />
                       <span className={cn("text-sm font-bold tabular-nums", text)}>
-                        {r.predominantConfidence}%
+                        {formatPercent(r.predominantConfidence)}
                       </span>
                       <VakMiniBar
                         v={r.visualProbability}
@@ -319,7 +319,7 @@ export function ResultsHistoryPage() {
                   </div>
 
                   {/* Desktop: badge */}
-                  <VakBadge style={display as VakStyle} className="hidden tablet:inline-flex" />
+                  <VakBadge style={display} className="hidden tablet:inline-flex" />
 
                   {/* Desktop: confidence */}
                   <span
@@ -328,7 +328,7 @@ export function ResultsHistoryPage() {
                       text,
                     )}
                   >
-                    {r.predominantConfidence}%
+                    {formatPercent(r.predominantConfidence)}
                   </span>
 
                   {/* Desktop: mini bar + numbers */}
@@ -339,7 +339,7 @@ export function ResultsHistoryPage() {
                       k={r.kinestheticProbability}
                     />
                     <span className="text-[11px] tabular-nums text-mathe-muted">
-                      {r.visualProbability} / {r.auditoryProbability} / {r.kinestheticProbability}
+                      {clampPercent(r.visualProbability)} / {clampPercent(r.auditoryProbability)} / {clampPercent(r.kinestheticProbability)}
                     </span>
                   </div>
 

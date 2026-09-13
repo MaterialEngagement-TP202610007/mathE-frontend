@@ -12,6 +12,8 @@ interface QuizIntroState {
   open: () => void
   close: () => void
   accept: () => void
+  /** Clears consent — required again before another questionnaire is created. */
+  reset: () => void
 }
 
 export const useQuizIntroStore = create<QuizIntroState>((set) => ({
@@ -20,4 +22,5 @@ export const useQuizIntroStore = create<QuizIntroState>((set) => ({
   open: () => set({ isOpen: true }),
   close: () => set({ isOpen: false }),
   accept: () => set({ isOpen: false, accepted: true }),
+  reset: () => set({ isOpen: false, accepted: false }),
 }))

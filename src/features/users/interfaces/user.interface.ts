@@ -16,7 +16,8 @@ export interface User {
 export interface UpdateProfilePayload {
   name?: string
   birthDate?: string
-  phoneNumber?: string
+  /** `null` clears the stored phone number. */
+  phoneNumber?: string | null
   academicGradeId?: number
   schoolId?: number
 }

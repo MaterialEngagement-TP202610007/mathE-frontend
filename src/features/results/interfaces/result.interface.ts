@@ -1,7 +1,9 @@
 export type VakStyleApi = "Visual" | "Auditory" | "Kinesthetic"
-export type ProfileType = "dominant" | "mixed"
+/** Confidence band of the predominant style, as computed by the classifier. */
+export type ProfileType = "clear" | "tendency" | "mixed"
 export type ClassifierType = "simple_score" | "xgboost"
-export type FeedbackSource = "gemini" | "fallback"
+/** `predefined` = static feedback used when Gemini is unavailable. */
+export type FeedbackSource = "gemini" | "predefined"
 
 export interface QuizResult {
   id: number
@@ -14,7 +16,7 @@ export interface QuizResult {
   auditoryProbability: number
   kinestheticProbability: number
   predominantConfidence: number
-  profileType: ProfileType
+  profileType: ProfileType | null
   isMixedProfile: boolean
   classifierType: ClassifierType
   modelVersion: string | null

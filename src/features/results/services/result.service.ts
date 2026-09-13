@@ -46,14 +46,6 @@ export const resultService = {
     return data
   },
 
-  correctLabel: async (id: number, vakLabel: VakStyleApi): Promise<QuizResult> => {
-    const { data } = await api.patch<QuizResult>(
-      `${ENDPOINT_SERVER.RESULTS}/${id}/correct-label`,
-      { vakLabel },
-    )
-    return data
-  },
-
   getSchoolStats: async (schoolId: number): Promise<SchoolStats> => {
     const { data } = await api.get<SchoolStats>(
       `${ENDPOINT_SERVER.RESULTS_STATS_SCHOOL}/${schoolId}`,

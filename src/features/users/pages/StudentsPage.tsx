@@ -9,7 +9,6 @@ import {
   Trash2,
   TrendingUp,
   UserCheck,
-  UserMinus,
   Users,
   X,
 } from "lucide-react"
@@ -34,7 +33,9 @@ import { DatePickerInput } from "@/components/ui/date-picker"
 import { useAuthStore } from "@/features/auth/store/auth.store"
 import { userService } from "../services/user.service"
 import type { User } from "../interfaces/user.interface"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { getErrorMessage } from "@/lib/http"
 import { formatDate } from "@/features/dashboard/utils"
 import { ROUTING } from "@/config/constant.config"
 
@@ -308,20 +309,10 @@ const CONFIRM_CONFIG = {
     icon: UserCheck,
     iconClass: "bg-emerald-50 text-emerald-600",
   },
-  deactivate: {
-    title: "¿Desactivar cuenta?",
-    description: (name: string) =>
-      `${name} no podrá iniciar sesión hasta ser reactivado.`,
-    confirmLabel: "Desactivar",
-    confirmVariant: "default" as const,
-    confirmClass: "bg-amber-500 hover:bg-amber-600 text-white",
-    icon: UserMinus,
-    iconClass: "bg-amber-50 text-amber-600",
-  },
   delete: {
     title: "¿Eliminar cuenta?",
     description: (name: string) =>
-      `Se desactivará la cuenta de ${name}. Esta acción es reversible por un administrador.`,
+      `Se eliminará la cuenta de ${name} y no podrá iniciar sesión. Esta acción no se puede deshacer desde la aplicación.`,
     confirmLabel: "Eliminar",
     confirmVariant: "destructive" as const,
     confirmClass: "",
@@ -335,7 +326,7 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
 }: {
-  confirm: { mode: "activate" | "deactivate" | "delete"; student: User } | null
+  confirm: { mode: "activate" | "delete"; student: User } | null
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -398,7 +389,9 @@ export function StudentsPage() {
 
   const [students, setStudents] = useState<User[]>([])
   const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [requestLoading, setLoading] = useState(true)
+  // Without a school there is nothing to fetch — never show skeletons forever.
+  const loading = Boolean(schoolId) && requestLoading
 
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all")
   const [gradeFilter, setGradeFilter] = useState("0")
@@ -410,7 +403,8 @@ export function StudentsPage() {
 
   const [detailStudent, setDetailStudent] = useState<User | null>(null)
   const [confirm, setConfirm] = useState<{
-    mode: "activate" | "deactivate" | "delete"
+    // The backend has no reversible "deactivate": DELETE /users/:id is a soft delete.
+    mode: "activate" | "delete"
     student: User
   } | null>(null)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
@@ -459,8 +453,13 @@ export function StudentsPage() {
         await userService.delete(student.id)
       }
       await fetchStudents()
-    } catch {
-      // silent
+    } catch (error) {
+      toast.error(
+        getErrorMessage(
+          error,
+          mode === "activate" ? "No se pudo activar la cuenta." : "No se pudo eliminar la cuenta.",
+        ),
+      )
     } finally {
       setActionLoading(null)
     }
@@ -645,7 +644,9 @@ export function StudentsPage() {
                 <p className="mt-1 text-sm text-mathe-muted">
                   {activeFilter !== "all" || gradeFilter !== "0" || hasBirthFilter || hasCreatedFilter
                     ? "Prueba ajustando los filtros"
-                    : "No hay estudiantes registrados en tu institución"}
+                    : schoolId
+                      ? "No hay estudiantes registrados en tu institución"
+                      : "Tu cuenta no tiene una institución asociada"}
                 </p>
               </div>
             </div>
@@ -735,18 +736,7 @@ export function StudentsPage() {
                               <Info className="size-4" />
                             </Button>
 
-                            {student.isActive ? (
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                title="Desactivar cuenta"
-                                disabled={busy}
-                                onClick={() => setConfirm({ mode: "deactivate", student })}
-                                className="rounded-xl border-mathe-border text-mathe-muted hover:border-amber-300 hover:text-amber-600"
-                              >
-                                <UserMinus className="size-4" />
-                              </Button>
-                            ) : (
+                            {!student.isActive && !student.deletedAt && (
                               <Button
                                 variant="outline"
                                 size="icon-sm"

@@ -75,8 +75,8 @@ const card = {
 export function ResultSummary({ result }: ResultSummaryProps) {
   const navigate = useNavigate();
   const displayStyle = toDisplayStyle(result.predominantStyle);
-  const iconClass = STYLE_ICON_CLASS[result.predominantStyle];
-  const svgIcon = STYLE_SVG[result.predominantStyle];
+  const iconClass = STYLE_ICON_CLASS[result.predominantStyle] ?? "bg-mathe-surface text-mathe-muted";
+  const svgIcon = STYLE_SVG[result.predominantStyle] ?? null;
 
   return (
     <>

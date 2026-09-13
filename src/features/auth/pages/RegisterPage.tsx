@@ -175,15 +175,16 @@ export function RegisterPage() {
           label="Teléfono (opcional)"
           name="phoneNumber"
           type="tel"
-          inputMode="numeric"
-          pattern="[0-9]*"
+          inputMode="tel"
           autoComplete="tel"
           placeholder="987654321"
-          maxLength={15}
+          maxLength={16}
           value={form.phoneNumber}
           onChange={(e) => {
-            const digits = e.target.value.replace(/\D/g, "")
-            set("phoneNumber", digits)
+            // Digits only, with an optional leading "+" (matches the backend phone format).
+            const raw = e.target.value.trim()
+            const digits = raw.replace(/\D/g, "")
+            set("phoneNumber", raw.startsWith("+") ? `+${digits}` : digits)
           }}
           error={fieldErrors.phoneNumber}
         />
