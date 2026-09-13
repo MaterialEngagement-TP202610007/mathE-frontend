@@ -58,7 +58,8 @@ do not assume the app runs as-is:
 - Auth/RBAC (per integration guide): JWT Bearer token in `Authorization` header, stored
   client-side. Role ids are integers — `1` Admin, `2` Teacher, `3` Student. On any `401`, clear
   the token and redirect to login. Decode the JWT for routing/guards only — never trust it for
-  security. Students register `isActive=false` and cannot log in until an admin activates them.
+  security. Students are active right after registering. Teachers
+  register `isActive=false` and cannot log in until an admin approves them (`/dashboard/profesores`).
 - The student quiz payload deliberately omits all VAK metadata (no `vakStyle`/`vakValue`) so the
   student isn't biased; teacher-facing question objects include it. Behavioural metrics on each
   answer (time, clicks, changes, reviews) feed the ML model — capture them, don't stub them.

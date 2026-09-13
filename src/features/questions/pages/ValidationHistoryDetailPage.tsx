@@ -13,6 +13,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+import { isForbiddenError } from "@/lib/http";
+import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope";
 import { ROUTING } from "@/config/constant.config";
 import { questionService } from "../services/question.service";
 import { VakBadge } from "@/features/dashboard/components/VakBadge";
@@ -142,8 +145,10 @@ export function ValidationHistoryDetailPage() {
         setQuestion(q);
         setSiblingIds(history.items.map((i) => i.id));
       })
-      .catch(() => {
-        if (!ignore) navigate(ROUTING.DASHBOARD_VALIDATION_HISTORY);
+      .catch((error) => {
+        if (ignore) return;
+        if (isForbiddenError(error)) toast.error(QUESTION_OTHER_SCHOOL_MESSAGE);
+        navigate(ROUTING.DASHBOARD_VALIDATION_HISTORY);
       })
       .finally(() => {
         if (!ignore) setLoadedId(id);

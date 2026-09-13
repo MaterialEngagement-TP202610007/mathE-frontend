@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import {
-  ChevronLeft,
-  ChevronRight,
   Info,
   Mail,
   Phone,
   Trash2,
   TrendingUp,
-  UserCheck,
   Users,
   X,
 } from "lucide-react"
@@ -35,9 +32,10 @@ import { userService } from "../services/user.service"
 import type { User } from "../interfaces/user.interface"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { getErrorMessage } from "@/lib/http"
+import { getErrorMessage, isForbiddenError } from "@/lib/http"
 import { formatDate } from "@/features/dashboard/utils"
 import { ROUTING } from "@/config/constant.config"
+import { Pagination } from "@/shared/components/Pagination"
 
 const PAGE_SIZE = 10
 
@@ -100,95 +98,10 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg"
   )
 }
 
-// ── Status badge ───────────────────────────────────────────────────────────────
-
-function StatusBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold ring-1",
-        isActive
-          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-          : "bg-rose-50 text-rose-600 ring-rose-200",
-      )}
-    >
-      <span className={cn("size-1.5 rounded-full", isActive ? "bg-emerald-500" : "bg-rose-500")} />
-      {isActive ? "Activo" : "Inactivo"}
-    </span>
-  )
-}
-
 // ── Skeleton ───────────────────────────────────────────────────────────────────
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse rounded-xl bg-mathe-border/60", className)} />
-}
-
-// ── Pagination ─────────────────────────────────────────────────────────────────
-
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-}: {
-  page: number
-  totalPages: number
-  onChange: (p: number) => void
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="outline"
-        size="icon-sm"
-        onClick={() => onChange(Math.max(1, page - 1))}
-        disabled={page === 1}
-        aria-label="Página anterior"
-        className="rounded-xl border-mathe-border shadow-sm"
-      >
-        <ChevronLeft className="size-4" />
-      </Button>
-
-      {Array.from({ length: totalPages }, (_, i) => i + 1)
-        .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-        .reduce<(number | "…")[]>((acc, p, i, arr) => {
-          if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…")
-          acc.push(p)
-          return acc
-        }, [])
-        .map((p, i) =>
-          p === "…" ? (
-            <span key={`e-${i}`} className="grid size-9 place-items-center text-sm text-mathe-muted">
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onChange(p as number)}
-              className={cn(
-                "grid size-9 place-items-center rounded-xl border text-sm font-semibold transition-colors",
-                page === p
-                  ? "border-mathe-blue bg-mathe-blue text-mathe-white shadow-sm"
-                  : "border-mathe-border bg-mathe-white text-mathe-muted shadow-sm hover:bg-mathe-surface",
-              )}
-            >
-              {p}
-            </button>
-          ),
-        )}
-
-      <Button
-        variant="outline"
-        size="icon-sm"
-        onClick={() => onChange(Math.min(totalPages, page + 1))}
-        disabled={page === totalPages}
-        aria-label="Página siguiente"
-        className="rounded-xl border-mathe-border shadow-sm"
-      >
-        <ChevronRight className="size-4" />
-      </Button>
-    </div>
-  )
 }
 
 // ── Detail dialog ──────────────────────────────────────────────────────────────
@@ -212,12 +125,7 @@ function DetailDialog({
 
             <div className="flex items-center gap-4">
               <Avatar name={student.name} size="lg" />
-              <div>
-                <p className="text-xl font-bold text-mathe-ink">{student.name}</p>
-                <div className="mt-1">
-                  <StatusBadge isActive={student.isActive} />
-                </div>
-              </div>
+              <p className="text-xl font-bold text-mathe-ink">{student.name}</p>
             </div>
 
             <div className="grid gap-3">
@@ -296,64 +204,38 @@ function DetailDialog({
   )
 }
 
-// ── Confirm dialog ─────────────────────────────────────────────────────────────
+// ── Delete confirm dialog ──────────────────────────────────────────────────────
 
-const CONFIRM_CONFIG = {
-  activate: {
-    title: "¿Activar cuenta?",
-    description: (name: string) =>
-      `${name} podrá iniciar sesión y realizar el cuestionario.`,
-    confirmLabel: "Activar",
-    confirmVariant: "default" as const,
-    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
-    icon: UserCheck,
-    iconClass: "bg-emerald-50 text-emerald-600",
-  },
-  delete: {
-    title: "¿Eliminar cuenta?",
-    description: (name: string) =>
-      `Se eliminará la cuenta de ${name} y no podrá iniciar sesión. Esta acción no se puede deshacer desde la aplicación.`,
-    confirmLabel: "Eliminar",
-    confirmVariant: "destructive" as const,
-    confirmClass: "",
-    icon: Trash2,
-    iconClass: "bg-rose-50 text-rose-600",
-  },
-}
-
-function ConfirmDialog({
-  confirm,
+function DeleteConfirmDialog({
+  student,
   onConfirm,
   onCancel,
 }: {
-  confirm: { mode: "activate" | "delete"; student: User } | null
+  student: User | null
   onConfirm: () => void
   onCancel: () => void
 }) {
-  if (!confirm) return null
-  const cfg = CONFIRM_CONFIG[confirm.mode]
-  const Icon = cfg.icon
+  if (!student) return null
 
   return (
     <Dialog open onOpenChange={(o) => !o && onCancel()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <div className={cn("mb-2 grid size-12 place-items-center rounded-xl", cfg.iconClass)}>
-            <Icon className="size-6" />
+          <div className="mb-2 grid size-12 place-items-center rounded-xl bg-rose-50 text-rose-600">
+            <Trash2 className="size-6" />
           </div>
-          <DialogTitle>{cfg.title}</DialogTitle>
-          <DialogDescription>{cfg.description(confirm.student.name)}</DialogDescription>
+          <DialogTitle>¿Eliminar cuenta?</DialogTitle>
+          <DialogDescription>
+            Se eliminará la cuenta de {student.name} y no podrá iniciar sesión. Esta acción no se
+            puede deshacer desde la aplicación.
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-2">
           <Button variant="outline" className="rounded-pill" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button
-            variant={cfg.confirmVariant}
-            className={cn("rounded-pill", cfg.confirmClass)}
-            onClick={onConfirm}
-          >
-            {cfg.confirmLabel}
+          <Button variant="destructive" className="rounded-pill" onClick={onConfirm}>
+            Eliminar
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -376,24 +258,17 @@ function FilterGroup({ label, children }: { label: string; children: React.React
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-type ActiveFilter = "all" | "active" | "inactive"
-
-const ACTIVE_TABS: { value: ActiveFilter; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "active", label: "Activos" },
-  { value: "inactive", label: "Inactivos" },
-]
-
 export function StudentsPage() {
   const schoolId = useAuthStore((s) => s.user?.school?.id)
 
   const [students, setStudents] = useState<User[]>([])
   const [total, setTotal] = useState(0)
   const [requestLoading, setLoading] = useState(true)
+  // `/users/students/by-school/:schoolId` answers 403 when the school is not the teacher's own.
+  const [forbidden, setForbidden] = useState(false)
   // Without a school there is nothing to fetch — never show skeletons forever.
   const loading = Boolean(schoolId) && requestLoading
 
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all")
   const [gradeFilter, setGradeFilter] = useState("0")
   const [birthFrom, setBirthFrom] = useState("")
   const [birthTo, setBirthTo] = useState("")
@@ -402,11 +277,8 @@ export function StudentsPage() {
   const [page, setPage] = useState(1)
 
   const [detailStudent, setDetailStudent] = useState<User | null>(null)
-  const [confirm, setConfirm] = useState<{
-    // The backend has no reversible "deactivate": DELETE /users/:id is a soft delete.
-    mode: "activate" | "delete"
-    student: User
-  } | null>(null)
+  // DELETE /users/:id is a soft delete; there is no reversible "deactivate".
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
 
   const fetchStudents = useCallback(async () => {
@@ -414,8 +286,6 @@ export function StudentsPage() {
     setLoading(true)
     try {
       const params: Record<string, unknown> = { page, limit: PAGE_SIZE }
-      if (activeFilter === "active") params.isActive = true
-      if (activeFilter === "inactive") params.isActive = false
       if (gradeFilter !== "0") params.academicGradeId = Number(gradeFilter)
       if (birthFrom) params.birthDateFrom = birthFrom
       if (birthTo) params.birthDateTo = birthTo
@@ -425,13 +295,15 @@ export function StudentsPage() {
       const res = await userService.listStudentsBySchool(schoolId, params)
       setStudents(res.items)
       setTotal(res.total)
-    } catch {
+      setForbidden(false)
+    } catch (error) {
+      setForbidden(isForbiddenError(error))
       setStudents([])
       setTotal(0)
     } finally {
       setLoading(false)
     }
-  }, [schoolId, page, activeFilter, gradeFilter, birthFrom, birthTo, createdFrom, createdTo])
+  }, [schoolId, page, gradeFilter, birthFrom, birthTo, createdFrom, createdTo])
 
   useEffect(() => {
     void fetchStudents()
@@ -441,25 +313,16 @@ export function StudentsPage() {
     setPage(1)
   }
 
-  async function handleConfirmAction() {
-    if (!confirm) return
-    const { mode, student } = confirm
-    setConfirm(null)
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return
+    const student = pendingDelete
+    setPendingDelete(null)
     setActionLoading(student.id)
     try {
-      if (mode === "activate") {
-        await userService.activate(student.id)
-      } else {
-        await userService.delete(student.id)
-      }
+      await userService.delete(student.id)
       await fetchStudents()
     } catch (error) {
-      toast.error(
-        getErrorMessage(
-          error,
-          mode === "activate" ? "No se pudo activar la cuenta." : "No se pudo eliminar la cuenta.",
-        ),
-      )
+      toast.error(getErrorMessage(error, "No se pudo eliminar la cuenta."))
     } finally {
       setActionLoading(null)
     }
@@ -499,31 +362,8 @@ export function StudentsPage() {
 
         {/* ── Filters ── */}
         <div className="rounded-2xl border border-mathe-border bg-mathe-white p-4 shadow-sm">
-          {/* Row 1: status + grade */}
+          {/* Row 1: grade */}
           <div className="flex flex-wrap items-end gap-6">
-            <FilterGroup label="Estado">
-              <div className="flex items-center gap-0.5 rounded-pill border border-mathe-border bg-mathe-surface p-1">
-                {ACTIVE_TABS.map((tab) => (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => {
-                      setActiveFilter(tab.value)
-                      resetPage()
-                    }}
-                    className={cn(
-                      "rounded-pill px-4 py-1.5 text-sm font-semibold transition-all",
-                      activeFilter === tab.value
-                        ? "bg-mathe-blue text-mathe-white shadow-sm"
-                        : "text-mathe-muted hover:text-mathe-ink",
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </FilterGroup>
-
             <FilterGroup label="Grado académico">
               <Select
                 value={gradeFilter}
@@ -613,7 +453,7 @@ export function StudentsPage() {
             <>
               <div className="border-b border-mathe-border bg-mathe-surface/60 px-6 py-3">
                 <div className="flex gap-6">
-                  {[32, 40, 20, 20, 20, 16, 20].map((w, i) => (
+                  {[32, 40, 20, 20, 20, 20].map((w, i) => (
                     <Skeleton key={i} className={`h-3 w-${w}`} />
                   ))}
                 </div>
@@ -629,7 +469,6 @@ export function StudentsPage() {
                   <Skeleton className="h-3 w-16 shrink-0" />
                   <Skeleton className="h-3 w-20 shrink-0" />
                   <Skeleton className="h-3 w-20 shrink-0" />
-                  <Skeleton className="h-6 w-20 shrink-0 rounded-pill" />
                   <Skeleton className="h-8 w-24 shrink-0 rounded-xl" />
                 </div>
               ))}
@@ -642,7 +481,9 @@ export function StudentsPage() {
               <div>
                 <p className="font-semibold text-mathe-ink">Sin estudiantes</p>
                 <p className="mt-1 text-sm text-mathe-muted">
-                  {activeFilter !== "all" || gradeFilter !== "0" || hasBirthFilter || hasCreatedFilter
+                  {forbidden
+                    ? "Estos estudiantes pertenecen a otro colegio. Solo puedes ver los de tu institución."
+                    : gradeFilter !== "0" || hasBirthFilter || hasCreatedFilter
                     ? "Prueba ajustando los filtros"
                     : schoolId
                       ? "No hay estudiantes registrados en tu institución"
@@ -670,16 +511,13 @@ export function StudentsPage() {
                     <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
                       Registro
                     </th>
-                    <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
-                      Estado
-                    </th>
                     <th className="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
                       Acciones
                     </th>
                   </tr>
                 </thead>
                 <motion.tbody
-                  key={`${page}-${activeFilter}-${gradeFilter}-${birthFrom}-${birthTo}-${createdFrom}-${createdTo}`}
+                  key={`${page}-${gradeFilter}-${birthFrom}-${birthTo}-${createdFrom}-${createdTo}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.18, ease: "easeOut" }}
@@ -720,10 +558,6 @@ export function StudentsPage() {
                           </span>
                         </td>
 
-                        <td className="px-3 py-4">
-                          <StatusBadge isActive={student.isActive} />
-                        </td>
-
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
@@ -736,25 +570,12 @@ export function StudentsPage() {
                               <Info className="size-4" />
                             </Button>
 
-                            {!student.isActive && !student.deletedAt && (
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                title="Activar cuenta"
-                                disabled={busy}
-                                onClick={() => setConfirm({ mode: "activate", student })}
-                                className="rounded-xl border-mathe-border text-mathe-muted hover:border-emerald-300 hover:text-emerald-600"
-                              >
-                                <UserCheck className="size-4" />
-                              </Button>
-                            )}
-
                             <Button
                               variant="outline"
                               size="icon-sm"
                               title="Eliminar estudiante"
                               disabled={busy || Boolean(student.deletedAt)}
-                              onClick={() => setConfirm({ mode: "delete", student })}
+                              onClick={() => setPendingDelete(student)}
                               className="rounded-xl border-mathe-border text-mathe-muted hover:border-rose-300 hover:text-rose-600"
                             >
                               <Trash2 className="size-4" />
@@ -793,10 +614,10 @@ export function StudentsPage() {
       </motion.div>
 
       <DetailDialog student={detailStudent} onClose={() => setDetailStudent(null)} />
-      <ConfirmDialog
-        confirm={confirm}
-        onConfirm={handleConfirmAction}
-        onCancel={() => setConfirm(null)}
+      <DeleteConfirmDialog
+        student={pendingDelete}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </>
   )

@@ -20,7 +20,7 @@ export function useLogin() {
       setSession(user)
       navigate(ROUTING.DASHBOARD, { replace: true })
     } catch (e) {
-      // 401 here usually means bad credentials OR an inactive student account.
+      // 401 here usually means bad credentials OR a teacher account pending admin approval.
       setError(
         e instanceof HttpError
           ? e.message

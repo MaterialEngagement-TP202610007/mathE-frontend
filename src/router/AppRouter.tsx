@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router"
-import { ROUTING } from "@/config/constant.config"
+import { ROLE, ROUTING } from "@/config/constant.config"
 import { Toaster } from "@/components/ui/sonner"
 import { HttpError, isTransientError, sleep } from "@/lib/http"
 import { AppSplash } from "@/shared/components/AppSplash"
@@ -23,9 +23,13 @@ import { QuestionReviewPage } from "@/features/questions/pages/QuestionReviewPag
 import { ValidationHistoryPage } from "@/features/questions/pages/ValidationHistoryPage"
 import { ValidationHistoryDetailPage } from "@/features/questions/pages/ValidationHistoryDetailPage"
 import { StudentsPage } from "@/features/users/pages/StudentsPage"
+import { TeachersApprovalPage } from "@/features/users/pages/TeachersApprovalPage"
 import { ProtectedRoute } from "./ProtectedRoute"
 import { PublicRoutes } from "./PublicRoutes"
 import { RouteErrorPage } from "./RouteErrorPage"
+
+/** Roles bound to a school (students and teachers); admins are excluded from their screens. */
+const SCHOOL_ROLES = [ROLE.STUDENT, ROLE.TEACHER]
 
 const router = createBrowserRouter([
   {
@@ -48,49 +52,63 @@ const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           // Full-screen pages — intentionally outside DashboardLayout (no sidebar/topbar).
-          { path: ROUTING.QUIZ, element: <QuizPage /> },
+          {
+            element: <ProtectedRoute allowedRoles={SCHOOL_ROLES} />,
+            children: [{ path: ROUTING.QUIZ, element: <QuizPage /> }],
+          },
           {
             path: ROUTING.DASHBOARD,
             element: <DashboardLayout />,
             children: [
+              // Shared by every role; admins are redirected to teacher approval from here.
               { index: true, element: <DashboardHome /> },
-              {
-                path: "historial",
-                element: <ResultsHistoryPage />,
-              },
               { path: "perfil", element: <ProfilePage /> },
-              { path: "notificaciones", element: <NotificationsPage /> },
               {
-                path: "preguntas",
-                element: <PendingQuestionsPage />,
+                element: <ProtectedRoute allowedRoles={[ROLE.ADMIN]} />,
+                children: [{ path: "profesores", element: <TeachersApprovalPage /> }],
               },
               {
-                path: "preguntas/:id",
-                element: <QuestionReviewPage />,
-              },
-              {
-                path: "estudiantes",
-                element: <StudentsPage />,
-              },
-              {
-                path: "historial-validacion",
-                element: <ValidationHistoryPage />,
-              },
-              {
-                path: "historial-validacion/:id",
-                element: <ValidationHistoryDetailPage />,
-              },
-              {
-                path: "reportes",
-                element: <ReportsPage />,
-              },
-              {
-                path: "evolucion/estudiante/:studentId",
-                element: <StudentResultsHistoryPage />,
-              },
-              {
-                path: "resultados/:id",
-                element: <ResultDetailPage />,
+                // Student/teacher screens call endpoints that answer 403 to admins.
+                element: <ProtectedRoute allowedRoles={SCHOOL_ROLES} />,
+                children: [
+                  {
+                    path: "historial",
+                    element: <ResultsHistoryPage />,
+                  },
+                  { path: "notificaciones", element: <NotificationsPage /> },
+                  {
+                    path: "preguntas",
+                    element: <PendingQuestionsPage />,
+                  },
+                  {
+                    path: "preguntas/:id",
+                    element: <QuestionReviewPage />,
+                  },
+                  {
+                    path: "estudiantes",
+                    element: <StudentsPage />,
+                  },
+                  {
+                    path: "historial-validacion",
+                    element: <ValidationHistoryPage />,
+                  },
+                  {
+                    path: "historial-validacion/:id",
+                    element: <ValidationHistoryDetailPage />,
+                  },
+                  {
+                    path: "reportes",
+                    element: <ReportsPage />,
+                  },
+                  {
+                    path: "evolucion/estudiante/:studentId",
+                    element: <StudentResultsHistoryPage />,
+                  },
+                  {
+                    path: "resultados/:id",
+                    element: <ResultDetailPage />,
+                  },
+                ],
               },
             ],
           },

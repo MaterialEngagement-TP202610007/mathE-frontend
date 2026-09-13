@@ -18,6 +18,7 @@ export enum ROUTING {
   DASHBOARD_VALIDATION_HISTORY_DETAIL = "/dashboard/historial-validacion/:id",
   DASHBOARD_REPORTS = "/dashboard/reportes",
   DASHBOARD_STUDENT_EVOLUTION = "/dashboard/evolucion/estudiante/:studentId",
+  DASHBOARD_TEACHERS = "/dashboard/profesores",
 }
 
 export enum ENDPOINT_SERVER {

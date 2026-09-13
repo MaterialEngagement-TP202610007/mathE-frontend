@@ -44,6 +44,7 @@ import { userService } from "@/features/users/services/user.service";
 import { toDisplayStyle } from "../utils/vak";
 import { ACADEMIC_GRADES } from "@/data/academic-grades";
 import { ROUTING } from "@/config/constant.config";
+import { isForbiddenError } from "@/lib/http";
 import type { SchoolStats, GradeStats } from "../interfaces/stats.interface";
 import type { QuizResult } from "../interfaces/result.interface";
 import type { User } from "@/features/users/interfaces/user.interface";
@@ -331,27 +332,7 @@ function StudentProfileModal({
           <div className="grid size-14 shrink-0 place-items-center rounded-full bg-mathe-blue/10 text-xl font-bold text-mathe-blue">
             {initials}
           </div>
-          <div>
-            <p className="text-lg font-bold text-mathe-ink">{name}</p>
-            {student && (
-              <span
-                className={cn(
-                  "mt-1 inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold ring-1",
-                  student.isActive
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                    : "bg-rose-50 text-rose-600 ring-rose-200",
-                )}
-              >
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    student.isActive ? "bg-emerald-500" : "bg-rose-500",
-                  )}
-                />
-                {student.isActive ? "Activo" : "Inactivo"}
-              </span>
-            )}
-          </div>
+          <p className="text-lg font-bold text-mathe-ink">{name}</p>
         </div>
 
         {student && (
@@ -431,13 +412,19 @@ export function ReportsPage() {
   // Student info modal
   const [studentModalId, setStudentModalId] = useState<number | null>(null);
 
+  // School-scoped endpoints answer 403 when the school is not the teacher's own.
+  const [forbidden, setForbidden] = useState(false);
+
   // ── Fetch stats ──
   useEffect(() => {
     if (!schoolId) return;
     resultService
       .getSchoolStats(schoolId)
       .then(setStats)
-      .catch(() => setStats(null))
+      .catch((error) => {
+        if (isForbiddenError(error)) setForbidden(true);
+        setStats(null);
+      })
       .finally(() => setStatsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -449,7 +436,10 @@ export function ReportsPage() {
     resultService
       .getSchoolStatsByGrade(schoolId, level)
       .then(setGradeData)
-      .catch(() => setGradeData([]))
+      .catch((error) => {
+        if (isForbiddenError(error)) setForbidden(true);
+        setGradeData([]);
+      })
       .finally(() => setGradeLoading(false));
   }, [schoolId, level]);
 
@@ -484,7 +474,10 @@ export function ReportsPage() {
         setResults(res.items);
         setResultsTotal(res.total);
       })
-      .catch(() => setResults([]))
+      .catch((error) => {
+        if (isForbiddenError(error)) setForbidden(true);
+        setResults([]);
+      })
       .finally(() => setResultsLoading(false));
   }, [schoolId, filterGrade, filterClassifier, resultsPage]);
 
@@ -518,8 +511,9 @@ export function ReportsPage() {
     Math.ceil(resultsTotal / RESULTS_PAGE_SIZE),
   );
 
-  // Nothing can be fetched without a school — show an empty state instead of endless skeletons.
-  if (!schoolId) {
+  // Nothing can be fetched without a school (or for another school) — show an empty state
+  // instead of endless skeletons or a broken screen.
+  if (!schoolId || forbidden) {
     return (
       <motion.div className="grid gap-6" initial="hidden" animate="show" variants={stagger}>
         <motion.div variants={fadeUp}>
@@ -533,10 +527,13 @@ export function ReportsPage() {
             <ClipboardList className="size-7 text-mathe-muted" />
           </span>
           <div>
-            <p className="font-semibold text-mathe-ink">Sin institución asociada</p>
+            <p className="font-semibold text-mathe-ink">
+              {forbidden ? "Sin acceso a estos reportes" : "Sin institución asociada"}
+            </p>
             <p className="mt-1 max-w-md text-sm text-mathe-muted">
-              Tu cuenta no tiene una institución asociada, por lo que no hay reportes para mostrar.
-              Contacta a un administrador.
+              {forbidden
+                ? "Estos reportes pertenecen a otro colegio. Solo puedes ver los reportes de tu institución."
+                : "Tu cuenta no tiene una institución asociada, por lo que no hay reportes para mostrar. Contacta a un administrador."}
             </p>
           </div>
         </motion.div>

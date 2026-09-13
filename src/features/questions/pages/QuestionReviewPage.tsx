@@ -20,7 +20,8 @@ import { useQuestionLoaderStore } from "../store/question-loader.store"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
-import { getErrorMessage } from "@/lib/http"
+import { getErrorMessage, isForbiddenError } from "@/lib/http"
+import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope"
 import type { Question } from "../interfaces/question.interface"
 
 // ── VAK helpers ───────────────────────────────────────────────────────────────
@@ -253,7 +254,10 @@ export function QuestionReviewPage() {
     questionService
       .getById(Number(id))
       .then(setQuestion)
-      .catch(() => navigate(ROUTING.DASHBOARD_QUESTIONS))
+      .catch((error) => {
+        if (isForbiddenError(error)) toast.error(QUESTION_OTHER_SCHOOL_MESSAGE)
+        navigate(ROUTING.DASHBOARD_QUESTIONS)
+      })
       .finally(() => setPageLoading(false))
   }, [id, navigate])
 
@@ -286,6 +290,11 @@ export function QuestionReviewPage() {
         setShowNoMore(true)
       }
     } catch (error) {
+      if (isForbiddenError(error)) {
+        toast.error(QUESTION_OTHER_SCHOOL_MESSAGE)
+        navigate(ROUTING.DASHBOARD_QUESTIONS)
+        return
+      }
       toast.error(
         getErrorMessage(
           error,

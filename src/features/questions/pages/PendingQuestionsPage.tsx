@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/http"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
+import { SchoolRequiredNotice } from "../components/SchoolRequiredNotice"
+import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "../utils/school-scope"
 import { useQuestionGenerationStore } from "../store/question-generation.store"
 import { useGenerationPolling } from "../hooks/use-generation-polling"
 
@@ -126,6 +128,8 @@ export function PendingQuestionsPage() {
 
   const [showModal, setShowModal] = useState(false)
   const startGenerationBatch = useQuestionGenerationStore((s) => s.startBatch)
+  // Questions are generated for the teacher's school — the backend rejects teachers without one.
+  const canGenerate = Boolean(user?.school?.id)
 
   function fetchPending() {
     questionService
@@ -245,15 +249,20 @@ export function PendingQuestionsPage() {
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-mathe-blue/90"
+          disabled={!canGenerate}
+          title={canGenerate ? undefined : SCHOOL_REQUIRED_TO_GENERATE_MESSAGE}
+          aria-describedby={canGenerate ? undefined : "generate-school-required"}
+          className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-mathe-blue/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-mathe-blue"
         >
           <Sparkles className="size-4" />
           Generar preguntas
         </button>
       </div>
 
+      {!canGenerate && <SchoolRequiredNotice id="generate-school-required" />}
+
       <GenerateQuestionsModal
-        open={showModal}
+        open={showModal && canGenerate}
         onClose={() => setShowModal(false)}
         onGenerate={handleGenerate}
       />

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, MailCheck } from "lucide-react";
+import { ArrowRight, CircleCheck, MailCheck } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,7 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { ROLE, ROUTING } from "@/config/constant.config";
 import { toFieldErrors } from "@/lib/form";
-import type { School } from "@/shared/services/school.service";
+import {
+  formatSchoolLabel,
+  type School,
+} from "@/shared/services/school.service";
 import { accountNoun, type AccountType } from "../types/account-type";
 import { AccountTypeTabs } from "../components/AccountTypeTabs";
 import { AuthLayout } from "../components/AuthLayout";
@@ -197,7 +200,7 @@ export function RegisterPage() {
             setForm((prev) => ({
               ...prev,
               schoolId: school.id,
-              schoolName: school.cenEdu,
+              schoolName: formatSchoolLabel(school),
             }))
           }
           error={fieldErrors.schoolId}
@@ -262,24 +265,30 @@ export function RegisterPage() {
         <DialogContent>
           <DialogHeader className="items-center text-center sm:text-center">
             <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-mathe-surface text-mathe-blue">
-              <MailCheck className="size-7" />
+              {isStudent ? (
+                <CircleCheck className="size-7" />
+              ) : (
+                <MailCheck className="size-7" />
+              )}
             </div>
-            <DialogTitle>Cuenta en revisión</DialogTitle>
+            <DialogTitle>
+              {isStudent ? "¡Cuenta creada!" : "Cuenta en revisión"}
+            </DialogTitle>
             <DialogDescription>
               Tu cuenta de {noun} fue creada correctamente.
             </DialogDescription>
           </DialogHeader>
           <p className="text-center text-sm leading-relaxed text-mathe-muted">
-            Un administrador revisará y validará tu acceso. Tu cuenta
-            permanecerá inactiva hasta que sea aprobada; te avisaremos cuando
-            esté lista.
+            {isStudent
+              ? "Ya puedes iniciar sesión con tu correo y contraseña."
+              : "Tu cuenta de profesor quedará pendiente hasta que un administrador la apruebe."}
           </p>
           <DialogFooter className="sm:justify-center">
             <Button
               onClick={goToLogin}
               className="h-11 rounded-pill bg-mathe-blue px-6 font-semibold hover:bg-mathe-blue-deep"
             >
-              Entendido
+              {isStudent ? "Iniciar sesión" : "Entendido"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,6 +8,8 @@ import { useAuthStore } from "@/features/auth/store/auth.store"
 import { questionService } from "@/features/questions/services/question.service"
 import { QuestionRow } from "@/features/questions/components/QuestionRow"
 import { GenerateQuestionsModal } from "@/features/questions/components/GenerateQuestionsModal"
+import { SchoolRequiredNotice } from "@/features/questions/components/SchoolRequiredNotice"
+import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "@/features/questions/utils/school-scope"
 import { useQuestionGenerationStore } from "@/features/questions/store/question-generation.store"
 import { useGenerationPolling } from "@/features/questions/hooks/use-generation-polling"
 import { useNotificationStore } from "@/features/notifications/store/notification.store"
@@ -172,6 +174,8 @@ export function TeacherDashboardHome() {
   }
 
   const firstName = user?.name?.split(" ")[0] ?? "Profesor"
+  // Questions are generated for the teacher's school — the backend rejects teachers without one.
+  const canGenerate = Boolean(user?.school?.id)
   const monthLabel = currentMonthLabel()
 
   return (
@@ -186,6 +190,12 @@ export function TeacherDashboardHome() {
           Bienvenido, Prof. {firstName}
         </h1>
       </motion.div>
+
+      {!canGenerate && (
+        <motion.div variants={fadeUp}>
+          <SchoolRequiredNotice id="generate-school-required" />
+        </motion.div>
+      )}
 
       {/* ── Stat cards ── */}
       <motion.div variants={fadeUp} className="grid gap-4 tablet:grid-cols-3">
@@ -267,7 +277,10 @@ export function TeacherDashboardHome() {
             <button
               type="button"
               onClick={() => setShowModal(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-6 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90"
+              disabled={!canGenerate}
+              title={canGenerate ? undefined : SCHOOL_REQUIRED_TO_GENERATE_MESSAGE}
+              aria-describedby={canGenerate ? undefined : "generate-school-required"}
+              className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-6 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-mathe-blue"
             >
               <Sparkles className="size-4" />
               Generar preguntas
@@ -325,7 +338,7 @@ export function TeacherDashboardHome() {
       </AnimatePresence>
 
       <GenerateQuestionsModal
-        open={showModal}
+        open={showModal && canGenerate}
         onClose={() => setShowModal(false)}
         onGenerate={handleGenerate}
       />

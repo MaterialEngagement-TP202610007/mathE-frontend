@@ -7,6 +7,7 @@ import {
   History,
   Home,
   User,
+  UserCheck,
   Users,
 } from "lucide-react"
 import { ROLE, ROUTING } from "@/config/constant.config"
@@ -39,9 +40,22 @@ const TEACHER_NAV: NavItem[] = [
   { label: "Perfil", to: ROUTING.DASHBOARD_PROFILE, icon: User },
 ]
 
-/** Sidebar items vary by role — teacher manages questions/students. */
+/** Admins only approve teachers; student/teacher screens would answer 403. */
+const ADMIN_NAV: NavItem[] = [
+  { label: "Profesores", to: ROUTING.DASHBOARD_TEACHERS, icon: UserCheck },
+  { label: "Perfil", to: ROUTING.DASHBOARD_PROFILE, icon: User },
+]
+
+/** Sidebar items vary by role — teacher manages questions/students, admin approves teachers. */
 export function navForRole(roleId: number | null): NavItem[] {
-  return roleId === ROLE.TEACHER ? TEACHER_NAV : STUDENT_NAV
+  switch (roleId) {
+    case ROLE.ADMIN:
+      return ADMIN_NAV
+    case ROLE.TEACHER:
+      return TEACHER_NAV
+    default:
+      return STUDENT_NAV
+  }
 }
 
 export function roleLabel(roleId: number | null): string {

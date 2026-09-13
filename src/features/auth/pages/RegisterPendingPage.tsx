@@ -12,8 +12,8 @@ export function RegisterPendingPage() {
           <MailCheck className="size-8" />
         </div>
         <p className="text-mathe-muted">
-          Tu cuenta fue creada correctamente. Un administrador debe activarla
-          antes de que puedas iniciar sesión. Te avisaremos cuando esté lista.
+          Tu cuenta fue creada correctamente. Tu cuenta de profesor quedará
+          pendiente hasta que un administrador la apruebe.
         </p>
         <Button
           asChild

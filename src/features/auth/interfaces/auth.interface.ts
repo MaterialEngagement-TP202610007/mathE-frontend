@@ -33,6 +33,7 @@ export interface RegisterPayload {
   birthDate: string
   roleId: number
   phoneNumber?: string
-  schoolId?: number
+  /** Required for students and teachers (backend returns 400 otherwise). */
+  schoolId: number
   academicGradeId?: number
 }

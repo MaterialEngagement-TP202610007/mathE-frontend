@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
+import { Navigate, useNavigate } from "react-router"
 import {
   ArrowRight,
   BookOpen,
@@ -168,6 +168,11 @@ export function DashboardHome() {
       .finally(() => setLoadingResults(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleId])
+
+  // Admins have no home dashboard: their landing screen is teacher approval.
+  if (roleId === ROLE.ADMIN) {
+    return <Navigate to={ROUTING.DASHBOARD_TEACHERS} replace />
+  }
 
   if (roleId === ROLE.TEACHER) {
     return <TeacherDashboardHome />

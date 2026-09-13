@@ -42,8 +42,13 @@ const KNOWN_SERVER_MESSAGES: { match: string; message: string }[] = [
   { match: "invalid credentials", message: "Correo o contraseña incorrectos." },
   {
     match: "account is inactive",
-    message: "Tu cuenta aún no está activa. Contacta a un administrador para activarla.",
+    message: "Tu cuenta de profesor está pendiente de aprobación por un administrador.",
   },
+  {
+    match: "only teacher accounts require activation",
+    message: "Solo las cuentas de profesor requieren aprobación.",
+  },
+  { match: "user is already active", message: "Esta cuenta ya está activa." },
   { match: "invalid session", message: "Tu sesión no es válida. Inicia sesión nuevamente." },
   { match: "email already registered", message: "Este correo ya está registrado." },
   {
@@ -53,6 +58,10 @@ const KNOWN_SERVER_MESSAGES: { match: string; message: string }[] = [
   {
     match: "no active questionnaire",
     message: "No tienes un cuestionario en progreso.",
+  },
+  {
+    match: "teacher must belong to a school",
+    message: "Debes pertenecer a un colegio para generar preguntas.",
   },
   // Rate limits (429). Specific prefixes first: the generic "too many" catch-all must stay last.
   {
@@ -120,6 +129,11 @@ export function isTransientError(error: unknown): boolean {
   if (!(error instanceof HttpError)) return false
   if (error.kind === "network" || error.kind === "timeout") return true
   return error.status === 502 || error.status === 503 || error.status === 504
+}
+
+/** True when the backend refused access (403), e.g. a resource owned by another school. */
+export function isForbiddenError(error: unknown): boolean {
+  return error instanceof HttpError && error.status === 403
 }
 
 /** User-facing message for any thrown value. */
