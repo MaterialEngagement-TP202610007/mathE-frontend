@@ -10,7 +10,7 @@
 # This bypasses cross-site cookie restrictions (SameSite) entirely.
 [[redirects]]
   from   = "/api/*"
-  to     = "https://mathe-backend-1cqc.onrender.com/api/:splat"
+  to     = "https://mathe-backend-kovc.onrender.com/api/:splat"
   status = 200
   force  = true
 
