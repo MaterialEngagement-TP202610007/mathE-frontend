@@ -22,6 +22,8 @@ import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboa
 import { cn } from "@/lib/utils"
 import { getErrorMessage, isForbiddenError } from "@/lib/http"
 import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope"
+import { MviStatusBadge } from "../components/MviStatusBadge"
+import { MviAnalysisDialog } from "../components/MviAnalysisDialog"
 import type { Question } from "../interfaces/question.interface"
 
 // ── VAK helpers ───────────────────────────────────────────────────────────────
@@ -127,11 +129,14 @@ function OptionItem({
 function ConfirmModal({
   open,
   mode,
+  mviFailed,
   onConfirm,
   onCancel,
 }: {
   open: boolean
   mode: "approve" | "reject"
+  /** The MVI engine reported blocking issues for this question. */
+  mviFailed: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -164,6 +169,12 @@ function ConfirmModal({
             ? "Esta pregunta quedará aprobada y podrá aparecer en el cuestionario que realizan los estudiantes."
             : "Esta pregunta quedará rechazada y no será visible en el cuestionario para los estudiantes."}
         </p>
+        {isApprove && mviFailed && (
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            El motor encontró observaciones; tu aprobación quedará registrada.
+          </p>
+        )}
         <div className="mt-6 flex gap-3">
           <button
             type="button"
@@ -399,6 +410,15 @@ export function QuestionReviewPage() {
             <div className="sticky top-6 rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm">
               <h3 className="mb-5 text-base font-bold text-mathe-ink">Validar pregunta</h3>
 
+              {/* MVI diagnosis */}
+              <div className="mb-5 grid gap-3 rounded-xl border border-mathe-border bg-mathe-surface/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                  Motor de validación
+                </p>
+                <MviStatusBadge status={question.mviStatus} className="w-fit" />
+                <MviAnalysisDialog question={question} />
+              </div>
+
               {/* Mode tabs */}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -509,6 +529,7 @@ export function QuestionReviewPage() {
         <ConfirmModal
           open={showConfirm}
           mode={mode}
+          mviFailed={question.mviStatus === "failed"}
           onConfirm={handleConfirm}
           onCancel={() => setShowConfirm(false)}
         />
