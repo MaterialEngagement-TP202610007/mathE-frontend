@@ -7,7 +7,7 @@ const DISPLAY_STYLE: Record<VakStyleApi, VakStyle> = {
   Kinesthetic: "Kinestésico",
 }
 
-function isVakStyleApi(style: unknown): style is VakStyleApi {
+export function isVakStyleApi(style: unknown): style is VakStyleApi {
   return typeof style === "string" && Object.hasOwn(DISPLAY_STYLE, style)
 }
 

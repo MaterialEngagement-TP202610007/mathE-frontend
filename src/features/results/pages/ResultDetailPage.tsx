@@ -9,7 +9,8 @@ import {
   Cpu,
   Download,
   Eye,
-  Headphones, 
+  Headphones,
+  Info,
   Loader2,
   Sparkles,
 } from "lucide-react"
@@ -26,6 +27,15 @@ import {
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { resultService } from "../services/result.service"
 import { lookupVak, toDisplayStyle, vakColors } from "../utils/vak"
+import {
+  PROVISIONAL_RESULT_MESSAGE,
+  PROVISIONAL_RESULT_TITLE,
+  STYLE_DESCRIPTIONS,
+  feedbackSourceLabel,
+  isAiFeedback,
+  isProvisionalResult,
+  resolveSecondaryStyle,
+} from "../utils/result-display"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
 
 // ── Static lookup tables ──────────────────────────────────────────────────────
@@ -46,15 +56,6 @@ const STYLE_ICON: Record<VakStyleApi, React.ElementType> = {
   Visual: Eye,
   Auditory: Headphones,
   Kinesthetic: Activity,
-}
-
-const STYLE_DESCRIPTIONS: Record<VakStyleApi, string> = {
-  Visual:
-    "El estilo Visual implica procesar y retener información principalmente a través de imágenes, diagramas y esquemas. Las personas con este estilo recuerdan mejor lo que ven y tienden a pensar en imágenes. Prefieren la información presentada de forma gráfica, organizada espacialmente y con uso de colores. Son buenos para interpretar mapas, tablas y gráficas.",
-  Auditory:
-    "El estilo Auditivo implica procesar y retener información principalmente a través del sonido y el lenguaje. Las personas con este estilo recuerdan mejor lo que escuchan y aprenden mediante conversaciones, debates y explicaciones verbales. Responden bien a instrucciones orales y disfrutan de los debates en clase.",
-  Kinesthetic:
-    "El estilo Kinestésico implica procesar y retener información a través de la experiencia física y el movimiento. Las personas con este estilo aprenden mejor haciendo, tocando y experimentando directamente con los materiales. Prefieren las actividades prácticas y el aprendizaje en movimiento.",
 }
 
 const CLASSIFIER_LABELS: Record<string, string> = {
@@ -195,9 +196,8 @@ export function ResultDetailPage() {
   // ── Derived values ────────────────────────────────────────────────────────
 
   const displayStyle = toDisplayStyle(result.predominantStyle)
-  const secondaryDisplay = result.secondaryStyle
-    ? toDisplayStyle(result.secondaryStyle)
-    : null
+  const secondaryStyle = result.isMixedProfile ? resolveSecondaryStyle(result) : null
+  const sourceLabel = feedbackSourceLabel(result.feedbackSource)
   const IconComponent = lookupVak(STYLE_ICON, result.predominantStyle, CircleHelp)
   const iconBg = lookupVak(STYLE_ICON_BG, result.predominantStyle, "bg-mathe-surface text-mathe-muted")
 
@@ -288,6 +288,23 @@ export function ResultDetailPage() {
               {lookupVak(STYLE_DESCRIPTIONS, result.predominantStyle, "")}
             </p>
           </motion.div>
+
+          {/* ── Provisional notice (simple_score fallback) ── */}
+          {isProvisionalResult(result.classifierType) ? (
+            <motion.div
+              variants={cardVariant}
+              role="note"
+              className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            >
+              <Info className="mt-0.5 size-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">{PROVISIONAL_RESULT_TITLE}</p>
+                <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                  {PROVISIONAL_RESULT_MESSAGE}
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
 
           {/* ── Distribution card ── */}
           <motion.div
@@ -417,7 +434,7 @@ export function ResultDetailPage() {
           </motion.div>
 
           {/* ── Mixed profile card ── */}
-          {result.isMixedProfile && result.secondaryStyle && secondaryDisplay && (
+          {secondaryStyle ? (
             <motion.div
               variants={cardVariant}
               className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm"
@@ -427,15 +444,22 @@ export function ResultDetailPage() {
               </p>
               <p className="mt-2 text-sm leading-relaxed text-mathe-muted">
                 Tu perfil predominante es{" "}
-                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con
-                componentes secundarios relevantes:
+                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con un
+                estilo secundario relevante:{" "}
+                <span className="font-semibold text-mathe-ink">
+                  {toDisplayStyle(secondaryStyle)}
+                </span>
+                .
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <VakBadge style={displayStyle} />
-                <VakBadge style={secondaryDisplay} />
+                <VakBadge style={toDisplayStyle(secondaryStyle)} />
               </div>
+              <p className="mt-4 text-sm leading-relaxed text-mathe-muted">
+                {STYLE_DESCRIPTIONS[secondaryStyle]}
+              </p>
             </motion.div>
-          )}
+          ) : null}
 
           {/* ── AI feedback card ── */}
           {result.aiFeedback && (
@@ -447,18 +471,19 @@ export function ResultDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-mathe-muted">
                   Retroalimentación personalizada
                 </p>
-                {result.feedbackSource === "gemini" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-600">
-                    <Sparkles className="size-3" />
-                    Gemini AI
-                  </span>
-                )}
-                {result.feedbackSource === "predefined" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
-                    <Bot className="size-3" />
-                    Respuesta estándar
-                  </span>
-                )}
+                {sourceLabel ? (
+                  isAiFeedback(result.feedbackSource) ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-600">
+                      <Sparkles className="size-3" />
+                      {sourceLabel}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
+                      <Bot className="size-3" />
+                      {sourceLabel}
+                    </span>
+                  )
+                ) : null}
               </div>
               <p className="text-sm leading-relaxed text-mathe-ink">{result.aiFeedback}</p>
             </motion.div>

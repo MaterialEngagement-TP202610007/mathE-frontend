@@ -35,6 +35,8 @@ export interface QuizAnswerRecord {
 export interface QuizCompletionResult {
   resultId: number
   predominantStyle: "Visual" | "Auditory" | "Kinesthetic"
+  /** Returned by the complete endpoint; absent on results recovered via the lean mapper. */
+  secondaryStyle?: string | null
   visualProbability: number
   auditoryProbability: number
   kinestheticProbability: number
