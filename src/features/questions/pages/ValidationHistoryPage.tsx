@@ -15,6 +15,7 @@ import { DatePickerInput } from "@/components/ui/date-picker"
 import { questionService } from "../services/question.service"
 import type { Question, QuestionStatus, VakStyleApi } from "../interfaces/question.interface"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
+import { ContentTypeBadge } from "../components/ContentTypeBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
 import { ROUTING } from "@/config/constant.config"
@@ -328,8 +329,8 @@ export function ValidationHistoryPage() {
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
+      {/* ── Table ── (scrolls inside the card on narrow screens, never the page) */}
+      <div className="overflow-x-auto rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
         {loading ? (
           <>
             <div className="border-b border-mathe-border bg-mathe-surface/60 px-6 py-3">
@@ -422,7 +423,7 @@ export function ValidationHistoryPage() {
                     </span>
                   </td>
                   <td className="px-3 py-4">
-                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
+                    <ContentTypeBadge contentType={q.contentType} />
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xs truncate text-sm text-mathe-ink">{q.statement}</p>

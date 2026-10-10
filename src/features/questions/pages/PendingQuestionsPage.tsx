@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/http"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
+import { ContentTypeBadge } from "../components/ContentTypeBadge"
 import { SchoolRequiredNotice } from "../components/SchoolRequiredNotice"
 import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "../utils/school-scope"
 import { useQuestionGenerationStore } from "../store/question-generation.store"
@@ -312,8 +313,8 @@ export function PendingQuestionsPage() {
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
+      {/* ── Table ── (scrolls inside the card on narrow screens, never the page) */}
+      <div className="overflow-x-auto rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
         {loading ? (
           <>
             <div className="border-b border-mathe-border bg-mathe-surface/60 px-6 py-3">
@@ -364,6 +365,9 @@ export function PendingQuestionsPage() {
                   Vista previa
                 </th>
                 <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                  Estilo
+                </th>
+                <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
                   Generada
                 </th>
                 <th className="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
@@ -388,10 +392,13 @@ export function PendingQuestionsPage() {
                     </code>
                   </td>
                   <td className="px-3 py-4">
-                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
+                    <ContentTypeBadge contentType={q.contentType} />
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xl truncate text-sm text-mathe-ink">{q.statement}</p>
+                  </td>
+                  <td className="px-3 py-4">
+                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
                   </td>
                   <td className="px-3 py-4 text-sm text-mathe-muted">
                     {formatDate(q.createdAt)}
