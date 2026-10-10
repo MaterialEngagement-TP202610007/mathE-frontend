@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Brain,
@@ -16,6 +17,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { isForbiddenError } from "@/lib/http";
 import { QUESTION_OTHER_SCHOOL_MESSAGE } from "../utils/school-scope";
+import { MviStatusBadge } from "../components/MviStatusBadge";
+import { MviAnalysisDialog } from "../components/MviAnalysisDialog";
 import { ROUTING } from "@/config/constant.config";
 import { questionService } from "../services/question.service";
 import { VakBadge } from "@/features/dashboard/components/VakBadge";
@@ -348,6 +351,21 @@ export function ValidationHistoryDetailPage() {
                       : "Esta pregunta fue descartada del banco de preguntas"}
                   </p>
                 </div>
+              </div>
+
+              {/* MVI diagnosis */}
+              <div className="mt-4 grid gap-3 rounded-xl border border-mathe-border bg-mathe-surface/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                  Motor de validación
+                </p>
+                <MviStatusBadge status={question.mviStatus} className="w-fit" />
+                {question.approvedOverMvi && (
+                  <p className="flex items-start gap-1.5 text-xs font-semibold text-amber-700">
+                    <AlertTriangle className="mt-px size-3.5 shrink-0" />
+                    Aprobada pese a observaciones del motor
+                  </p>
+                )}
+                <MviAnalysisDialog question={question} />
               </div>
 
               {/* Rejection reason */}
