@@ -36,6 +36,8 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
   const setCurrentIndex = useQuizStore((s) => s.setCurrentIndex)
   const [runnerPhase, setRunnerPhase] = useState<RunnerPhase>("answering")
   const [direction, setDirection] = useState<1 | -1>(1)
+  // Question whose "Siguiente"/"Revisar" was pressed without an answer (shows the inline hint).
+  const [blockedQuestionId, setBlockedQuestionId] = useState<number | null>(null)
   // Synchronous guard: the phase switch alone can't stop a fast double click.
   const submittingRef = useRef(false)
 
@@ -50,6 +52,7 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
   const answeredCount = Object.keys(answers).length
   const allAnswered = answeredCount === questions.length
   const isLastQuestion = currentIndex === questions.length - 1
+  const showAnswerHint = blockedQuestionId === currentQuestion.questionId && !currentAnswer
 
   const handleOptionSelect = (optionId: number) => {
     markAnswered(currentQuestion.questionId, optionId)
@@ -57,8 +60,18 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
   }
 
   const goTo = (index: number) => {
+    setBlockedQuestionId(null)
     setDirection(index > currentIndex ? 1 : -1)
     setCurrentIndex(index)
+  }
+
+  /** Runs `advance` only when the current question has an answer; otherwise shows the hint. */
+  const requireAnswer = (advance: () => void) => {
+    if (!currentAnswer) {
+      setBlockedQuestionId(currentQuestion.questionId)
+      return
+    }
+    advance()
   }
 
   const handleSubmit = async () => {
@@ -121,6 +134,7 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
           answers={answers}
           allAnswered={allAnswered}
           onEditQuestion={(index) => {
+            setBlockedQuestionId(null)
             setDirection(index > currentIndex ? 1 : -1)
             setCurrentIndex(index)
             setRunnerPhase("answering")
@@ -273,7 +287,8 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
             {isLastQuestion ? (
               <button
                 type="button"
-                onClick={() => setRunnerPhase("review")}
+                onClick={() => requireAnswer(() => setRunnerPhase("review"))}
+                aria-describedby={showAnswerHint ? "quiz-answer-hint" : undefined}
                 className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
               >
                 <CheckCircle2 className="size-4" />
@@ -282,7 +297,8 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
             ) : (
               <button
                 type="button"
-                onClick={() => goTo(currentIndex + 1)}
+                onClick={() => requireAnswer(() => goTo(currentIndex + 1))}
+                aria-describedby={showAnswerHint ? "quiz-answer-hint" : undefined}
                 className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
               >
                 Siguiente
@@ -290,6 +306,17 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
               </button>
             )}
           </div>
+
+          {showAnswerHint ? (
+            <p
+              id="quiz-answer-hint"
+              role="alert"
+              className="mt-3 flex items-center justify-end gap-1.5 text-sm font-medium text-amber-700"
+            >
+              <TriangleAlert className="size-4 shrink-0" />
+              Selecciona una respuesta para continuar
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
