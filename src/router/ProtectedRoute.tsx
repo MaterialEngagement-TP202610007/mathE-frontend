@@ -14,8 +14,10 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <Navigate to={ROUTING.LOGIN} replace />
   }
 
+  // Wrong role: back to the dashboard index, which every role may open (it renders the
+  // role's home, or sends admins to teacher approval), so this can never loop.
   if (allowedRoles && (roleId === null || !allowedRoles.includes(roleId))) {
-    return <Navigate to={ROUTING.HOME} replace />
+    return <Navigate to={ROUTING.DASHBOARD} replace />
   }
 
   return <Outlet />

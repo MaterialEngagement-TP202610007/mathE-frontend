@@ -28,7 +28,11 @@ import { ProtectedRoute } from "./ProtectedRoute"
 import { PublicRoutes } from "./PublicRoutes"
 import { RouteErrorPage } from "./RouteErrorPage"
 
-/** Roles bound to a school (students and teachers); admins are excluded from their screens. */
+// HU-15: each school role only reaches its own screens; admins keep their own group.
+// Wrong-role visits are redirected by ProtectedRoute to the role's dashboard home.
+const STUDENT_ONLY = [ROLE.STUDENT]
+const TEACHER_ONLY = [ROLE.TEACHER]
+/** Screens both school roles use (endpoints answer 403 to admins). */
 const SCHOOL_ROLES = [ROLE.STUDENT, ROLE.TEACHER]
 
 const router = createBrowserRouter([
@@ -53,7 +57,7 @@ const router = createBrowserRouter([
         children: [
           // Full-screen pages — intentionally outside DashboardLayout (no sidebar/topbar).
           {
-            element: <ProtectedRoute allowedRoles={SCHOOL_ROLES} />,
+            element: <ProtectedRoute allowedRoles={STUDENT_ONLY} />,
             children: [{ path: ROUTING.QUIZ, element: <QuizPage /> }],
           },
           {
@@ -68,45 +72,30 @@ const router = createBrowserRouter([
                 children: [{ path: "profesores", element: <TeachersApprovalPage /> }],
               },
               {
-                // Student/teacher screens call endpoints that answer 403 to admins.
+                // Shared school screens: notifications for both roles; result detail is opened by
+                // students (own results, notifications) and teachers (reports, student evolution).
                 element: <ProtectedRoute allowedRoles={SCHOOL_ROLES} />,
                 children: [
-                  {
-                    path: "historial",
-                    element: <ResultsHistoryPage />,
-                  },
                   { path: "notificaciones", element: <NotificationsPage /> },
-                  {
-                    path: "preguntas",
-                    element: <PendingQuestionsPage />,
-                  },
-                  {
-                    path: "preguntas/:id",
-                    element: <QuestionReviewPage />,
-                  },
-                  {
-                    path: "estudiantes",
-                    element: <StudentsPage />,
-                  },
-                  {
-                    path: "historial-validacion",
-                    element: <ValidationHistoryPage />,
-                  },
-                  {
-                    path: "historial-validacion/:id",
-                    element: <ValidationHistoryDetailPage />,
-                  },
-                  {
-                    path: "reportes",
-                    element: <ReportsPage />,
-                  },
+                  { path: "resultados/:id", element: <ResultDetailPage /> },
+                ],
+              },
+              {
+                element: <ProtectedRoute allowedRoles={STUDENT_ONLY} />,
+                children: [{ path: "historial", element: <ResultsHistoryPage /> }],
+              },
+              {
+                element: <ProtectedRoute allowedRoles={TEACHER_ONLY} />,
+                children: [
+                  { path: "preguntas", element: <PendingQuestionsPage /> },
+                  { path: "preguntas/:id", element: <QuestionReviewPage /> },
+                  { path: "estudiantes", element: <StudentsPage /> },
+                  { path: "historial-validacion", element: <ValidationHistoryPage /> },
+                  { path: "historial-validacion/:id", element: <ValidationHistoryDetailPage /> },
+                  { path: "reportes", element: <ReportsPage /> },
                   {
                     path: "evolucion/estudiante/:studentId",
                     element: <StudentResultsHistoryPage />,
-                  },
-                  {
-                    path: "resultados/:id",
-                    element: <ResultDetailPage />,
                   },
                 ],
               },
