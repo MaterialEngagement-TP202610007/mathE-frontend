@@ -79,4 +79,4 @@ Forecast: ~450 authored changed lines. Strategy: `ask-on-risk` (chain strategy a
 
 ## Next step
 
-Push and PR into `release` (user decision), linking backend PR MaterialEngagement-TP202610007/mathE-backend#1 as a dependency.
+PR opened: MaterialEngagement-TP202610007/mathE-frontend#3 into `release` (single PR, user choice), depending on mathE-backend#1. Pending: visual check against the deployed backend; merge is the user decision.
