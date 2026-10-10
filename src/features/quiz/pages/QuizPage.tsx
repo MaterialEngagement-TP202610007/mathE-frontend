@@ -11,18 +11,23 @@ import { questionnaireService } from "../services/questionnaire.service"
 import { GeneratingQuiz } from "../components/GeneratingQuiz"
 import { QuizRunner } from "../components/QuizRunner"
 import { AbandonDialog } from "../components/AbandonDialog"
+import { ActiveQuestionnaireDialog } from "../components/ActiveQuestionnaireDialog"
 import { ResultSummary } from "@/features/results/components/ResultSummary"
-import type { QuizCompletionResult } from "../interfaces/questionnaire.interface"
+import type {
+  QuestionnaireResponse,
+  QuizCompletionResult,
+} from "../interfaces/questionnaire.interface"
 
 /**
  * Phase machine:
  *  checking   → resolve localStorage / accepted / GET active
+ *  choosing   → an active questionnaire exists: continue it or start a new one
  *  generating → POST /questionnaires in flight
  *  ready      → POST succeeded, waiting for user to click "Continuar"
  *  questions  → active quiz
  *  result     → quiz submitted, showing result summary inline
  */
-type Phase = "checking" | "generating" | "ready" | "questions" | "result"
+type Phase = "checking" | "choosing" | "generating" | "ready" | "questions" | "result"
 
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
@@ -33,6 +38,9 @@ export function QuizPage() {
   const [phase, setPhase] = useState<Phase>("checking")
   const [manualAbandon, setManualAbandon] = useState(false)
   const [quizResult, setQuizResult] = useState<QuizCompletionResult | null>(null)
+  // Active questionnaire fetched after a 409; only loaded into the store if the student continues it.
+  const [pendingActive, setPendingActive] = useState<QuestionnaireResponse | null>(null)
+  const localQuestionnaireId = useQuizStore((s) => s.session?.questionnaireId ?? null)
   const abandonedRef = useRef(false)
   // Guards against a duplicate POST when effects re-run (e.g. React StrictMode).
   const createStartedRef = useRef(false)
@@ -60,7 +68,8 @@ export function QuizPage() {
   useEffect(() => {
     const existing = useQuizStore.getState().session
     if (existing?.status === "in_progress") {
-      setPhase("questions")
+      // Consent means the student asked for a new questionnaire: let them choose.
+      setPhase(accepted ? "choosing" : "questions")
       return
     }
     if (accepted) {
@@ -101,11 +110,10 @@ export function QuizPage() {
             /active questionnaire/i.test(error.serverMessage ?? ""))
 
         if (hasActive) {
-          // Resume the questionnaire that is already in progress instead of failing.
+          // Ask whether to continue the questionnaire already in progress or start a new one.
           try {
-            startSession(await questionnaireService.getActive())
-            toast.info("Ya tenías un cuestionario en progreso. Puedes continuar donde lo dejaste.")
-            setPhase("questions")
+            setPendingActive(await questionnaireService.getActive())
+            setPhase("choosing")
             return
           } catch {
             // fall through to the generic error below
@@ -145,6 +153,25 @@ export function QuizPage() {
   const handleAbandonCancel = () => {
     setManualAbandon(false)
     if (blocker.state === "blocked") blocker.reset()
+  }
+
+  const handleContinueActive = () => {
+    if (pendingActive) startSession(pendingActive)
+    setPendingActive(null)
+    resetQuizIntro()
+    setPhase("questions")
+  }
+
+  // The dialog already abandoned the active questionnaire and cleared the local session.
+  const handleStartNew = () => {
+    setPendingActive(null)
+    createStartedRef.current = false
+    setPhase("generating")
+  }
+
+  const handleChoiceDismissed = () => {
+    resetQuizIntro()
+    navigate(ROUTING.DASHBOARD, { replace: true })
   }
 
   const handleComplete = (result: QuizCompletionResult) => {
@@ -192,7 +219,7 @@ export function QuizPage() {
       >
         {isResult && quizResult ? (
           <ResultSummary result={quizResult} />
-        ) : phase === "questions" ? (
+        ) : phase === "choosing" ? null : phase === "questions" ? (
           <QuizRunner onComplete={handleComplete} onAbandoned={handleAbandonedRemotely} />
         ) : (
           <GeneratingQuiz
@@ -201,6 +228,14 @@ export function QuizPage() {
           />
         )}
       </main>
+
+      <ActiveQuestionnaireDialog
+        open={phase === "choosing"}
+        questionnaireId={pendingActive?.id ?? localQuestionnaireId}
+        onContinue={handleContinueActive}
+        onStartNew={handleStartNew}
+        onDismiss={handleChoiceDismissed}
+      />
 
       {isAbandonVisible && (
         <AbandonDialog

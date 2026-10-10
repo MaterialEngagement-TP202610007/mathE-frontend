@@ -20,6 +20,7 @@ import { useQuizIntroStore } from "@/features/quiz/store/quiz-intro.store"
 import { useQuizStore } from "@/features/quiz/store/quiz.store"
 import { useQuizStatusStore } from "@/features/quiz/store/quiz-status.store"
 import { questionnaireService } from "@/features/quiz/services/questionnaire.service"
+import { ActiveQuestionnaireDialog } from "@/features/quiz/components/ActiveQuestionnaireDialog"
 import { resultService } from "@/features/results/services/result.service"
 import { toDisplayStyle, vakColors } from "@/features/results/utils/vak"
 import { ACADEMIC_GRADES } from "@/data/academic-grades"
@@ -143,6 +144,7 @@ export function DashboardHome() {
 
   const [results, setResults] = useState<QuizResult[]>([])
   const [loadingResults, setLoadingResults] = useState(true)
+  const [activeDialogOpen, setActiveDialogOpen] = useState(false)
 
   useEffect(() => {
     if (roleId !== ROLE.STUDENT) return
@@ -184,6 +186,14 @@ export function DashboardHome() {
   const latest = results[0] ?? null
   const answeredCount = Object.keys(quizSession?.answers ?? {}).length
   const totalQuestions = quizSession?.questions.length ?? 10
+  const hasActiveQuiz = availability === "has_local" || availability === "has_remote"
+
+  // An active questionnaire (local or hydrated from the server) offers "continue" vs "start new".
+  const startOrResumeQuiz = () => {
+    if (quizSession) setActiveDialogOpen(true)
+    else if (hasActiveQuiz) navigate(ROUTING.QUIZ)
+    else openQuizIntro()
+  }
 
   return (
     <motion.div className="grid gap-8" initial="hidden" animate="show" variants={stagger}>
@@ -227,10 +237,10 @@ export function DashboardHome() {
               )}
             </div>
 
-            {availability === "has_local" || availability === "has_remote" ? (
+            {hasActiveQuiz ? (
               <button
                 type="button"
-                onClick={() => navigate(ROUTING.QUIZ)}
+                onClick={startOrResumeQuiz}
                 className="inline-flex h-12 items-center gap-2 rounded-pill bg-mathe-white px-6 text-sm font-semibold text-mathe-blue transition-colors hover:bg-mathe-surface"
               >
                 <PlayCircle className="size-4" />
@@ -297,11 +307,11 @@ export function DashboardHome() {
       </div>
 
       {/* ── Active quiz banner ── */}
-      {(availability === "has_local" || availability === "has_remote") && (
+      {hasActiveQuiz && (
         <motion.div variants={fadeUp}>
           <button
             type="button"
-            onClick={() => navigate(ROUTING.QUIZ)}
+            onClick={startOrResumeQuiz}
             className="flex w-full items-center gap-4 rounded-2xl border border-mathe-blue/20 bg-blue-50 px-6 py-4 text-left transition-colors hover:bg-blue-100"
           >
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-mathe-blue text-mathe-white">
@@ -379,7 +389,7 @@ export function DashboardHome() {
             </div>
             <button
               type="button"
-              onClick={openQuizIntro}
+              onClick={startOrResumeQuiz}
               className="inline-flex h-10 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface hover:text-mathe-blue"
             >
               <ClipboardList className="size-4" />
@@ -449,6 +459,20 @@ export function DashboardHome() {
         )}
       </motion.section>
 
+      <ActiveQuestionnaireDialog
+        open={activeDialogOpen}
+        questionnaireId={quizSession?.questionnaireId ?? null}
+        onContinue={() => {
+          setActiveDialogOpen(false)
+          navigate(ROUTING.QUIZ)
+        }}
+        onStartNew={() => {
+          setActiveDialogOpen(false)
+          // A new questionnaire still requires fresh consent (terms modal → /cuestionario).
+          openQuizIntro()
+        }}
+        onDismiss={() => setActiveDialogOpen(false)}
+      />
     </motion.div>
   )
 }
