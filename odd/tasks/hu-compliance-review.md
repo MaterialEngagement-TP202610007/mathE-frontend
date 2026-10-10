@@ -30,7 +30,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
   HU-02/09 send `acceptTerms: true`.
 - [x] A2 `feat/hu-compliance-fe-a2` — quiz session flow: HU-16/29 S2 active questionnaire dialog,
   HU-17 S2 generation error + "Reintentar", HU-07/14 S2 idle logout (~30 min) + S1 quiz header logout.
-- [ ] A3 `feat/hu-compliance-fe-a3` — dashboard and profile: HU-04/11 real totals, HU-05/12 zod per-field validation.
+- [x] A3 `feat/hu-compliance-fe-a3` — dashboard and profile: HU-04/11 real totals, HU-05/12 zod per-field validation.
 - [ ] A4 `feat/hu-compliance-fe-a4` — question lists: HU-40 content-type badge, HU-46 S2 style-specific empty
   message, HU-58/60 MVI status column + "Aprobada sobre MVI" marker.
 - [ ] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
@@ -90,6 +90,21 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   `ActiveQuestionnaireDialog` no longer abandons by itself; callers do it via `utils/abandon-active-questionnaire.ts`,
   and the in-quiz dialog (consent already given) abandons right before creating.
 
+- A3 done on `feat/hu-compliance-fe-a3` (route: delegated direct, writer trigger). Commits: `7144cbd` HU-04/11
+  dashboard totals: student "Cuestionarios realizados" uses `total` from the existing `GET /results/my` response
+  (request unchanged, `limit: 5`), with "Desde <fecha>" only when the loaded page holds every result, otherwise
+  "Último: <fecha>"; teacher cards show full-period pending/approved/rejected totals from `GET /questions/my?status=`
+  (`limit: 1` for approved/rejected, already used in `QuestionReviewPage`), loaded with `Promise.allSettled` so a failed
+  count shows "—" / "No se pudo cargar" without hiding the others. Labels changed from "Aprobadas/Rechazadas este mes"
+  to "Preguntas aprobadas/rechazadas" + "En total" (the data is no longer month-scoped); unused `isThisMonth` removed.
+  `10bcaf8` HU-05/12 profile: new `src/features/users/schemas/profile.schema.ts` (name required trimmed, max 100;
+  phone register/backend regex or empty; valid birth date), inline errors under each field with `aria-invalid` +
+  `aria-describedby`, school error through the existing `SchoolSearchBox` error prop, errors cleared on edit; a stored
+  birth date cannot be cleared; API failures keep the toast. Decision: unchanged stored name/phone values are not
+  re-validated, so legacy data never blocks saving other fields. Payload shape unchanged (same conditional fields).
+  Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint, no new
+  query param (`status`, `page`, `limit` documented for `/questions/my`), no request-shape change.
+
 ## Next step
 
-A3.
+A4.
