@@ -31,7 +31,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 - [x] A2 `feat/hu-compliance-fe-a2` — quiz session flow: HU-16/29 S2 active questionnaire dialog,
   HU-17 S2 generation error + "Reintentar", HU-07/14 S2 idle logout (~30 min) + S1 quiz header logout.
 - [x] A3 `feat/hu-compliance-fe-a3` — dashboard and profile: HU-04/11 real totals, HU-05/12 zod per-field validation.
-- [ ] A4 `feat/hu-compliance-fe-a4` — question lists: HU-40 content-type badge, HU-46 S2 style-specific empty
+- [x] A4 `feat/hu-compliance-fe-a4` — question lists: HU-40 content-type badge, HU-46 S2 style-specific empty
   message, HU-58/60 MVI status column + "Aprobada sobre MVI" marker.
 - [ ] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
   HU-35 S2 mark `result_available` notification read on detail open, HU-54 S1 error panel with support link.
@@ -104,7 +104,21 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   re-validated, so legacy data never blocks saving other fields. Payload shape unchanged (same conditional fields).
   Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint, no new
   query param (`status`, `page`, `limit` documented for `/questions/my`), no request-shape change.
+- A4 done on `feat/hu-compliance-fe-a4` (route: delegated direct, writer trigger; ~167 authored lines). Commits:
+  `3e12231` HU-40 new `ContentTypeBadge` (Texto/Imagen/Audio pill, VakBadge pattern; missing/unknown `contentType`
+  renders nothing) in the "Tipo" column of both list pages (the history "Tipo" column previously duplicated the VAK
+  badge; the pending list gains an "Estilo" column for the VAK badge) and in the `QuestionRow` meta line; list tables
+  now scroll inside their card (`overflow-x-auto`) instead of being clipped, so the page never overflows horizontally.
+  `706d59a` HU-46 S2 style-specific empty messages using the existing `toSpanishStyle` map ("No hay preguntas de estilo
+  Visual pendientes de validación." / "No hay preguntas[ aprobadas| rechazadas] de estilo Auditivo en el historial.");
+  shown when the style filter is active without search/date filters (those keep "Prueba ajustando los filtros"); no
+  filter keeps the original generic message. `64f0a10` HU-58/60 `MviStatusBadge` gains optional `size="sm"` (default
+  rendering unchanged) and new `MviRowMarkers` / `ApprovedOverMviMarker` ("Aprobada sobre MVI") rendered under the
+  statement in both list pages and in `QuestionRow`, wrapping on narrow screens. Decision: the MVI badge renders only
+  when `mviStatus` is present (non-null/undefined), so legacy production rows show no "Sin validar" noise; the marker
+  renders only when `approvedOverMvi` is true. Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint`
+  pass. Production safety: display-only, no new endpoint, no request change, all read fields already optional.
 
 ## Next step
 
-A4.
+A5.
