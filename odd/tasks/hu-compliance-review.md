@@ -25,7 +25,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 
 ## Tasks
 
-- [ ] A1 `feat/hu-compliance-fe-a1` — result and quiz display: HU-28 feedback source, HU-30/32 secondary style,
+- [x] A1 `feat/hu-compliance-fe-a1` — result and quiz display: HU-28 feedback source, HU-30/32 secondary style,
   HU-52 provisional notice, HU-21 S1 media placeholder, HU-19 S2 block "Siguiente" without answer,
   HU-02/09 send `acceptTerms: true`.
 - [ ] A2 `feat/hu-compliance-fe-a2` — quiz session flow: HU-16/29 S2 active questionnaire dialog,
@@ -55,7 +55,17 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
 ## Progress
 
 - Tracker branch checked out. Feature document created. Endpoint and `acceptTerms` safety verified against backend `origin/main`.
+- A1 done on `feat/hu-compliance-fe-a1` (route: delegated direct, writer trigger). Commits: `6dffa11` results display
+  (HU-28 source label, HU-30/32 secondary style + description, HU-52 provisional notice; shared
+  `src/features/results/utils/result-display.ts`), `6ca97d4` quiz (HU-19 S2 answer required for Siguiente/Revisar with
+  `role="alert"` hint; HU-21 S1 placeholder only for explicit `image`/`audio` content types without `mediaUrl`),
+  `8a39886` register (`acceptTerms: true` only when accepted). Checks: `pnpm build` pass (existing chunk-size warning),
+  `pnpm lint` pass. Production safety: no new endpoint; only additive request field `acceptTerms`; new response field
+  `secondaryStyle` on the completion result is optional, with a probability-based fallback and no render when unidentifiable.
+  Note: the recovery mapper in `src/features/quiz/utils/complete-questionnaire.ts` (outside A1 surface) drops
+  `secondaryStyle`; the probability fallback covers it. The sidebar "Finalizar cuestionario" still opens the review screen,
+  whose submit already requires all answers.
 
 ## Next step
 
-A1.
+A2.
