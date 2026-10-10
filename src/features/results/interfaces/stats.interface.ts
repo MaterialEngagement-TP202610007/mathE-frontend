@@ -10,9 +10,12 @@ export interface GradeStats {
   gradeId: number
   gradeName?: string
   level: "Primaria" | "Secundaria"
-  avgVisualProbability: number
-  avgAuditoryProbability: number
-  avgKinestheticProbability: number
+  /** Distinct students of the grade with at least one result (0 when nobody was evaluated). */
+  evaluatedStudents?: number
+  /** Averages are `null` when the grade has no evaluated students. */
+  avgVisualProbability: number | null
+  avgAuditoryProbability: number | null
+  avgKinestheticProbability: number | null
 }
 
 export interface UserResultStats {
