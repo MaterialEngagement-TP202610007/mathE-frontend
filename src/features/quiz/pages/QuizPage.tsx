@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, useBlocker } from "react-router"
-import { X } from "lucide-react"
+import { Loader2, LogOut, X } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { ROUTING } from "@/config/constant.config"
+import { useIdleLogout } from "@/features/auth/hooks/useIdleLogout"
+import { useAuthStore } from "@/features/auth/store/auth.store"
 import { HttpError, getErrorMessage } from "@/lib/http"
 import { MatheLogo } from "@/shared/components/icons/MatheLogo"
 import { useQuizIntroStore } from "../store/quiz-intro.store"
@@ -35,6 +46,7 @@ export function QuizPage() {
   const resetQuizIntro = useQuizIntroStore((s) => s.reset)
   const navigate = useNavigate()
   const { startSession, clearSession } = useQuizStore()
+  const logout = useAuthStore((s) => s.logout)
 
   const [phase, setPhase] = useState<Phase>("checking")
   const [manualAbandon, setManualAbandon] = useState(false)
@@ -44,6 +56,10 @@ export function QuizPage() {
   const [pendingActive, setPendingActive] = useState<QuestionnaireResponse | null>(null)
   const localQuestionnaireId = useQuizStore((s) => s.session?.questionnaireId ?? null)
   const abandonedRef = useRef(false)
+  // Signing out must leave the page without the abandon prompt.
+  const loggingOutRef = useRef(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   // Guards against a duplicate POST when effects re-run (e.g. React StrictMode).
   const createStartedRef = useRef(false)
 
@@ -52,8 +68,16 @@ export function QuizPage() {
     ({ currentLocation, nextLocation }) =>
       phase === "questions" &&
       !abandonedRef.current &&
+      !loggingOutRef.current &&
       currentLocation.pathname !== nextLocation.pathname,
   )
+
+  // ── Inactivity logout (the quiz lives outside DashboardLayout) ──
+  useIdleLogout({
+    onBeforeLogout: () => {
+      loggingOutRef.current = true
+    },
+  })
 
   // ── Browser / tab close guard ────────────────────────────────
   useEffect(() => {
@@ -184,6 +208,23 @@ export function QuizPage() {
     navigate(ROUTING.DASHBOARD, { replace: true })
   }
 
+  // The questionnaire is not abandoned: it stays active server-side and the local copy is kept.
+  const performLogout = async () => {
+    setLoggingOut(true)
+    loggingOutRef.current = true
+    try {
+      await logout({ keepQuiz: true })
+    } catch {
+      // The local session is cleared even if the logout request fails.
+    }
+    navigate(ROUTING.LOGIN, { replace: true })
+  }
+
+  const handleLogoutClick = () => {
+    if (phase === "questions") setLogoutConfirmOpen(true)
+    else void performLogout()
+  }
+
   const handleComplete = (result: QuizCompletionResult) => {
     clearSession()
     resetQuizIntro()
@@ -206,16 +247,28 @@ export function QuizPage() {
     <div className="relative flex min-h-svh flex-col bg-mathe-surface">
       <header className="flex h-20 shrink-0 items-center justify-between px-6 tablet:px-10 bg-mathe-white border-b border-mathe-border">
         <MatheLogo width={108} height={48} />
-        {phase === "questions" && (
+        <div className="flex items-center gap-1 tablet:gap-2">
+          {phase === "questions" && (
+            <button
+              type="button"
+              onClick={() => setManualAbandon(true)}
+              className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
+            >
+              <X className="size-4" />
+              Abandonar
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setManualAbandon(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
+            onClick={handleLogoutClick}
+            disabled={loggingOut}
+            aria-label="Cerrar sesión"
+            className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <X className="size-4" />
-            Abandonar
+            {loggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+            <span className="hidden tablet:inline">Cerrar sesión</span>
           </button>
-        )}
+        </div>
       </header>
 
       <main
@@ -248,6 +301,47 @@ export function QuizPage() {
         onStartNew={handleStartNew}
         onDismiss={handleChoiceDismissed}
       />
+
+      <Dialog
+        open={logoutConfirmOpen}
+        onOpenChange={(next) => {
+          if (!loggingOut) setLogoutConfirmOpen(next)
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-7">
+          <DialogHeader className="pr-6">
+            <DialogTitle>¿Cerrar sesión?</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              Tienes un cuestionario en curso. No se abandonará: podrás continuarlo
+              cuando vuelvas a iniciar sesión.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLogoutConfirmOpen(false)}
+              disabled={loggingOut}
+              className="h-11 rounded-pill px-6 font-semibold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void performLogout()}
+              disabled={loggingOut}
+              className="h-11 rounded-pill bg-mathe-blue px-6 font-semibold hover:bg-mathe-blue-deep"
+            >
+              {loggingOut ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <LogOut data-icon="inline-start" />
+              )}
+              Cerrar sesión
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isAbandonVisible && (
         <AbandonDialog

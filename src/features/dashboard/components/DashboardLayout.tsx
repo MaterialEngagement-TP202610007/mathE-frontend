@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Outlet } from "react-router"
+import { useIdleLogout } from "@/features/auth/hooks/useIdleLogout"
 import { TermsModal } from "@/features/quiz/components/TermsModal"
 import { BrainLoader } from "@/features/questions/components/BrainLoader"
 import { MobileSidebar, Sidebar } from "./Sidebar"
@@ -7,6 +8,7 @@ import { Topbar } from "./Topbar"
 
 export function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  useIdleLogout()
 
   return (
     <div className="flex min-h-svh bg-mathe-surface">

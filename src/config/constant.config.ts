@@ -61,3 +61,6 @@ export enum ROLE {
   TEACHER = 2,
   STUDENT = 3,
 }
+
+/** Inactivity window after which the session is closed automatically (HU-07 / HU-14). */
+export const IDLE_LOGOUT_MS = 30 * 60 * 1000
