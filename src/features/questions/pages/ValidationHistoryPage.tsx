@@ -31,6 +31,13 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: "rejected", label: "Rechazadas" },
 ]
 
+/** Status qualifier for the style-specific empty message ("aprobadas" / "rechazadas"). */
+const STATUS_QUALIFIER: Record<StatusFilter, string> = {
+  all: "",
+  approved: " aprobadas",
+  rejected: " rechazadas",
+}
+
 const VAK_TABS: { value: VakFilter; label: string }[] = [
   { value: "all", label: "Todas" },
   { value: "Visual", label: "Visual" },
@@ -191,6 +198,15 @@ export function ValidationHistoryPage() {
   const fromIdx = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const toIdx = Math.min(page * PAGE_SIZE, filtered.length)
   const hasDateFilter = Boolean(dateFrom || dateTo)
+  const hasSearch = Boolean(search.trim())
+  // HU-46 S2: a style filter (optionally with a status tab) gets a style-specific message;
+  // search or date filters keep the generic hint because the message would no longer be exact.
+  const emptyMessage =
+    vakFilter !== "all" && !hasDateFilter && !hasSearch
+      ? `No hay preguntas${STATUS_QUALIFIER[statusFilter]} de estilo ${toSpanishStyle(vakFilter)} en el historial.`
+      : statusFilter !== "all" || vakFilter !== "all" || hasDateFilter || search
+        ? "Prueba ajustando los filtros"
+        : "Aún no hay preguntas validadas en tu historial"
 
   return (
     <motion.div
@@ -362,11 +378,7 @@ export function ValidationHistoryPage() {
             </span>
             <div>
               <p className="font-semibold text-mathe-ink">Sin resultados</p>
-              <p className="mt-1 text-sm text-mathe-muted">
-                {statusFilter !== "all" || vakFilter !== "all" || hasDateFilter || search
-                  ? "Prueba ajustando los filtros"
-                  : "Aún no hay preguntas validadas en tu historial"}
-              </p>
+              <p className="mt-1 text-sm text-mathe-muted">{emptyMessage}</p>
             </div>
           </div>
         ) : (

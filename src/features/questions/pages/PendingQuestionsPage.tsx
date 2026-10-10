@@ -230,6 +230,13 @@ export function PendingQuestionsPage() {
   const fromIdx = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const toIdx = Math.min(page * PAGE_SIZE, filtered.length)
   const hasDateFilter = Boolean(dateFrom || dateTo)
+  // HU-46 S2: a style-only filter gets a style-specific message; combined filters keep the generic hint.
+  const emptyMessage =
+    vakFilter !== "all" && !hasDateFilter
+      ? `No hay preguntas de estilo ${toSpanishStyle(vakFilter)} pendientes de validación.`
+      : vakFilter !== "all" || hasDateFilter
+        ? "Prueba ajustando los filtros"
+        : "No hay preguntas pendientes de revisión"
 
   return (
     <motion.div
@@ -344,11 +351,7 @@ export function PendingQuestionsPage() {
             </span>
             <div>
               <p className="font-semibold text-mathe-ink">Sin resultados</p>
-              <p className="mt-1 text-sm text-mathe-muted">
-                {vakFilter !== "all" || hasDateFilter
-                  ? "Prueba ajustando los filtros"
-                  : "No hay preguntas pendientes de revisión"}
-              </p>
+              <p className="mt-1 text-sm text-mathe-muted">{emptyMessage}</p>
             </div>
           </div>
         ) : (
