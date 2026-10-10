@@ -36,7 +36,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 - [x] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
   HU-35 S2 mark `result_available` notification read on detail open, HU-54 S1 error panel with support link.
 - [x] A6 `feat/hu-compliance-fe-a6` — HU-15 per-role routes, HU-34 student evolution access + presets + min-two message.
-- [ ] A7 `feat/hu-compliance-fe-a7` — HU-44 label correction screen (`PATCH /api/results/:id/correct-label`).
+- [x] A7 `feat/hu-compliance-fe-a7` — HU-44 label correction screen (`PATCH /api/results/:id/correct-label`).
 
 ## Checks
 
@@ -182,6 +182,24 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   `DashboardHome` redirect to `profesores`, admin Sidebar (profesores, perfil), topbar profile; notifications are hidden
   for admins in the topbar.
 
+- A7 done on `feat/hu-compliance-fe-a7` (route: delegated direct, writer trigger; ~270 authored lines). Commit:
+  `9253039` HU-44 `LabelCorrectionPanel` in `ResultDetailPage` (outside the PDF-captured region), rendered only for
+  `ROLE.TEACHER`. Contract verified on backend `origin/main`: `PATCH /api/results/:id/correct-label`,
+  `roleGuard(TEACHER, ADMIN)`, body `{ vakLabel: "Visual" | "Auditory" | "Kinesthetic" }`, 400 `{ error }` for a
+  missing/invalid label or id, 404 when the result is missing; responds with `ResultEntity`. The panel shows the
+  predicted label, the corrected label when known, a select with exactly the three accepted values, and "Guardar
+  corrección" (disabled while saving or when the selection equals `correctedVakLabel ?? predominantStyle`) that opens
+  a confirmation dialog ("Esta corrección actualizará la etiqueta usada para entrenar el modelo.") before calling the
+  new `resultService.correctLabel`; success updates the page state in place + toast, errors show the backend message
+  inline and keep the panel usable. New `ENDPOINT_SERVER.RESULTS_CORRECT_LABEL`; optional `correctedVakLabel?` and
+  `correctedAt?` on `QuizResult` ("Corregido el {fecha}" only when `correctedAt` is present). Flow documented in
+  `docs/FRONTEND-INTEGRATION.md`. Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint` pass.
+  Production safety: only the deployed endpoint with its exact body; students never see the panel; no request/response
+  contract change. Decisions: teachers only (backend allows admins, but admins cannot open `/dashboard/resultados/:id`).
+  Gap for phase B: the deployed `ResultEntity` omits `correctedVakLabel` (stored in the DB, not mapped), so neither
+  `GET /:id` nor the PATCH response returns it; the panel uses the submitted label after success and, after a reload,
+  shows no previous correction until the backend maps `correctedVakLabel` (and `correctedAt`).
+
 ## Next step
 
-A7.
+Phase A complete; phase B waits for backend contracts (BE2, BE3 queued).
