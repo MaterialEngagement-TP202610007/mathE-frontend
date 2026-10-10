@@ -144,6 +144,8 @@ export function DashboardHome() {
   const startSession = useQuizStore((s) => s.startSession)
 
   const [results, setResults] = useState<QuizResult[]>([])
+  // Full count from the paginated response; `null` when the request failed.
+  const [resultsTotal, setResultsTotal] = useState<number | null>(null)
   const [loadingResults, setLoadingResults] = useState(true)
   const [activeDialogOpen, setActiveDialogOpen] = useState(false)
 
@@ -166,8 +168,14 @@ export function DashboardHome() {
 
     resultService
       .getMy({ page: 1, limit: 5 })
-      .then((res) => setResults(res.items))
-      .catch(() => setResults([]))
+      .then((res) => {
+        setResults(res.items)
+        setResultsTotal(res.total)
+      })
+      .catch(() => {
+        setResults([])
+        setResultsTotal(null)
+      })
       .finally(() => setLoadingResults(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleId])
@@ -188,6 +196,18 @@ export function DashboardHome() {
   const answeredCount = Object.keys(quizSession?.answers ?? {}).length
   const totalQuestions = quizSession?.questions.length ?? 10
   const hasActiveQuiz = availability === "has_local" || availability === "has_remote"
+  // Only the latest page is loaded, so the oldest date is known only when it holds every result.
+  const oldestLoaded = results[results.length - 1]
+  const completedHint =
+    resultsTotal === null
+      ? "No se pudo cargar"
+      : resultsTotal === 0
+        ? "Completa tu primer cuestionario"
+        : oldestLoaded && resultsTotal <= results.length
+          ? `Desde ${formatDate(oldestLoaded.createdAt)}`
+          : latest
+            ? `Último: ${formatDate(latest.createdAt)}`
+            : `${resultsTotal} en total`
 
   // An active questionnaire (local or hydrated from the server) offers "continue" vs "start new".
   const startOrResumeQuiz = () => {
@@ -297,8 +317,8 @@ export function DashboardHome() {
         <motion.div variants={fadeUp} className="laptop:col-span-2">
           <StatCard
             label="Cuestionarios realizados"
-            value={loadingResults ? "—" : String(results.length === 5 ? "5+" : results.length)}
-            hint={results.length > 0 ? `Desde ${formatDate(results[results.length - 1]?.createdAt ?? "")}` : "Completa tu primer cuestionario"}
+            value={resultsTotal === null ? "—" : String(resultsTotal)}
+            hint={completedHint}
             icon={<TrendingUp className="size-4" />}
             accent
             loading={loadingResults}

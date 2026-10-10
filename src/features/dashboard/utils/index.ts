@@ -18,9 +18,3 @@ export function formatDate(iso: string) {
     year: "numeric",
   })
 }
-
-export function isThisMonth(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-}
