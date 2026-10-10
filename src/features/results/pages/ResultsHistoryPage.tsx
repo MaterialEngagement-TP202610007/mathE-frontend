@@ -9,9 +9,11 @@ import {
   ClipboardList,
   Filter,
   History,
+  TrendingUp,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { ROUTING } from "@/config/constant.config"
+import { useAuthStore } from "@/features/auth/store/auth.store"
 import { resultService, type MyResultsParams } from "../services/result.service"
 import { toDisplayStyle, vakColors } from "../utils/vak"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
@@ -96,6 +98,7 @@ const STYLE_CHIPS: { label: string; value: VakStyleApi | "" }[] = [
 
 export function ResultsHistoryPage() {
   const navigate = useNavigate()
+  const userId = useAuthStore((s) => s.user?.id)
 
   const [styleFilter, setStyleFilter] = useState<VakStyleApi | "">("")
   const [startDate, setStartDate] = useState("")
@@ -157,14 +160,30 @@ export function ResultsHistoryPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate(ROUTING.DASHBOARD)}
-          className="inline-flex h-10 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90"
-        >
-          <ClipboardList className="size-4" />
-          Nueva evaluación
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {userId !== undefined && (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  ROUTING.DASHBOARD_STUDENT_EVOLUTION.replace(":studentId", String(userId)),
+                )
+              }
+              className="inline-flex h-10 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-blue transition-colors hover:bg-mathe-surface"
+            >
+              <TrendingUp className="size-4" />
+              Ver mi evolución
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate(ROUTING.DASHBOARD)}
+            className="inline-flex h-10 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue/90"
+          >
+            <ClipboardList className="size-4" />
+            Nueva evaluación
+          </button>
+        </div>
       </motion.div>
 
       {/* ── Filters ── */}

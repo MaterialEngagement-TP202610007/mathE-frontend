@@ -43,8 +43,15 @@ import { VakBadge } from "@/features/dashboard/components/VakBadge";
 import { userService } from "@/features/users/services/user.service";
 import { resultService } from "../services/result.service";
 import { toDisplayStyle } from "../utils/vak";
+import {
+  EVOLUTION_PERIODS,
+  MIN_EVOLUTION_RESULTS,
+  evolutionPeriodFrom,
+  type EvolutionPeriod,
+} from "../utils/evolution-period";
 import { ACADEMIC_GRADES } from "@/data/academic-grades";
-import { ROUTING } from "@/config/constant.config";
+import { ROLE, ROUTING } from "@/config/constant.config";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 import type { User } from "@/features/users/interfaces/user.interface";
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface";
 import type {
@@ -257,6 +264,9 @@ export function StudentResultsHistoryPage() {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const id = Number(studentId);
+  // Students only reach this route for their own id (see AppRouter); their results
+  // table uses GET /results/my, since GET /results/student/:id is teacher/admin only.
+  const isOwnView = useAuthStore((s) => s.roleId) === ROLE.STUDENT;
 
   const [student, setStudent] = useState<User | null>(null);
   const [studentLoading, setStudentLoading] = useState(true);
@@ -271,6 +281,7 @@ export function StudentResultsHistoryPage() {
   const [selectedGranularity, setSelectedGranularity] = useState<
     Granularity | undefined
   >(undefined);
+  const [period, setPeriod] = useState<EvolutionPeriod>("all");
 
   // Results table
   const [results, setResults] = useState<QuizResult[]>([]);
@@ -282,7 +293,7 @@ export function StudentResultsHistoryPage() {
   const [filterStyle, setFilterStyle] = useState<string>("");
   const [filterClassifier, setFilterClassifier] = useState<string>("");
 
-  const evolutionKey = `${id}|${selectedGranularity ?? ""}`;
+  const evolutionKey = `${id}|${selectedGranularity ?? ""}|${period}`;
   const resultsKey = [id, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier].join("|");
 
   useEffect(() => {
@@ -307,31 +318,39 @@ export function StudentResultsHistoryPage() {
     if (!id) return;
     const key = evolutionKey;
     resultService
-      .getEvolution(id, { granularity: selectedGranularity })
+      .getEvolution(id, {
+        granularity: selectedGranularity,
+        from: evolutionPeriodFrom(period),
+      })
       .then(setEvolution)
       .catch(() => setEvolution(null))
       .finally(() => setEvolutionLoadedKey(key));
-  }, [id, selectedGranularity, evolutionKey]);
+  }, [id, selectedGranularity, period, evolutionKey]);
 
   useEffect(() => {
     if (!id) return;
     const key = resultsKey;
-    resultService
-      .listByStudent(id, {
-        page: resultsPage,
-        limit: RESULTS_PAGE_SIZE,
-        startDate: filterStartDate || undefined,
-        endDate: filterEndDate || undefined,
-        predominantStyle: filterStyle as VakStyleApi || undefined,
-        classifierType: filterClassifier || undefined,
-      })
+    const params = {
+      page: resultsPage,
+      limit: RESULTS_PAGE_SIZE,
+      startDate: filterStartDate || undefined,
+      endDate: filterEndDate || undefined,
+      predominantStyle: filterStyle as VakStyleApi || undefined,
+    };
+    const request = isOwnView
+      ? resultService.getMy(params)
+      : resultService.listByStudent(id, {
+          ...params,
+          classifierType: filterClassifier || undefined,
+        });
+    request
       .then((res) => {
         setResults(res.items);
         setResultsTotal(res.total);
       })
       .catch(() => setResults([]))
       .finally(() => setResultsLoadedKey(key));
-  }, [id, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier, resultsKey]);
+  }, [id, isOwnView, resultsPage, filterStartDate, filterEndDate, filterStyle, filterClassifier, resultsKey]);
 
   const statsLoading = statsLoadedKey !== id;
   const evolutionLoading = evolutionLoadedKey !== evolutionKey;
@@ -352,6 +371,9 @@ export function StudentResultsHistoryPage() {
     })) ?? [];
 
   const activeGranularity = evolution?.granularity;
+  const hasEvaluations = (evolution?.totalEvaluations ?? 0) > 0;
+  const canCompare =
+    (evolution?.totalEvaluations ?? 0) >= MIN_EVOLUTION_RESULTS && chartData.length > 0;
 
   function toggleGranularity(g: Granularity) {
     setSelectedGranularity((prev) => (prev === g ? undefined : g));
@@ -383,11 +405,13 @@ export function StudentResultsHistoryPage() {
       <motion.div variants={fadeUp}>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() =>
+            isOwnView ? navigate(ROUTING.DASHBOARD_HISTORY) : navigate(-1)
+          }
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-mathe-muted transition-colors hover:text-mathe-ink"
         >
           <ArrowLeft className="size-4" />
-          Volver a reportes
+          {isOwnView ? "Volver al historial" : "Volver a reportes"}
         </button>
       </motion.div>
 
@@ -586,30 +610,55 @@ export function StudentResultsHistoryPage() {
                   </p>
                 )}
               </div>
-              {/* Granularity toggle */}
-              <div className="flex items-center gap-1 self-start rounded-xl border border-mathe-border bg-mathe-surface p-1">
-                {(["day", "month", "year"] as Granularity[]).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => toggleGranularity(g)}
-                    className={cn(
-                      "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                      activeGranularity === g
-                        ? "bg-mathe-white text-mathe-ink shadow-sm"
-                        : "text-mathe-muted hover:text-mathe-ink",
-                    )}
-                  >
-                    {GRANULARITY_LABELS[g]}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2 self-start">
+                {/* Period presets (HU-34) */}
+                <div
+                  role="group"
+                  aria-label="Período de la evolución"
+                  className="flex items-center gap-1 rounded-xl border border-mathe-border bg-mathe-surface p-1"
+                >
+                  {EVOLUTION_PERIODS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      aria-pressed={period === p.value}
+                      onClick={() => setPeriod(p.value)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                        period === p.value
+                          ? "bg-mathe-white text-mathe-ink shadow-sm"
+                          : "text-mathe-muted hover:text-mathe-ink",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Granularity toggle */}
+                <div className="flex items-center gap-1 rounded-xl border border-mathe-border bg-mathe-surface p-1">
+                  {(["day", "month", "year"] as Granularity[]).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => toggleGranularity(g)}
+                      className={cn(
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                        activeGranularity === g
+                          ? "bg-mathe-white text-mathe-ink shadow-sm"
+                          : "text-mathe-muted hover:text-mathe-ink",
+                      )}
+                    >
+                      {GRANULARITY_LABELS[g]}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {evolutionLoading ? (
               <Skeleton className="h-64 w-full rounded-xl" />
-            ) : !chartData.length ? (
+            ) : !evolution || (!hasEvaluations && period === "all") ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <span className="grid size-14 place-items-center rounded-2xl bg-mathe-surface shadow-sm">
                   <BarChart2 className="size-7 text-mathe-muted" />
@@ -619,7 +668,27 @@ export function StudentResultsHistoryPage() {
                     Sin datos de evolución
                   </p>
                   <p className="mt-1 text-sm text-mathe-muted">
-                    Este estudiante aún no tiene evaluaciones registradas.
+                    {!evolution
+                      ? "No se pudo cargar la evolución. Intenta de nuevo más tarde."
+                      : isOwnView
+                        ? "Aún no tienes evaluaciones registradas."
+                        : "Este estudiante aún no tiene evaluaciones registradas."}
+                  </p>
+                </div>
+              </div>
+            ) : !canCompare ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <span className="grid size-14 place-items-center rounded-2xl bg-mathe-surface shadow-sm">
+                  <TrendingUp className="size-7 text-mathe-muted" />
+                </span>
+                <div>
+                  <p className="font-semibold text-mathe-ink">
+                    Necesitas al menos dos resultados para comparar
+                  </p>
+                  <p className="mt-1 text-sm text-mathe-muted">
+                    {period === "all"
+                      ? "La evolución se muestra a partir de la segunda evaluación."
+                      : "Elige un período más amplio o completa más evaluaciones."}
                   </p>
                 </div>
               </div>
@@ -768,28 +837,30 @@ export function StudentResultsHistoryPage() {
                 </Select>
               </div>
 
-              {/* Classifier (etiqueta) */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
-                  Etiqueta
-                </span>
-                <Select
-                  value={filterClassifier || "all"}
-                  onValueChange={(v) => {
-                    setFilterClassifier(v === "all" ? "" : v);
-                    resetResultsPage();
-                  }}
-                >
-                  <SelectTrigger className="h-10 w-44 rounded-pill border-mathe-border">
-                    <SelectValue placeholder="Cualquier etiqueta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Cualquiera</SelectItem>
-                    <SelectItem value="xgboost">XGBoost</SelectItem>
-                    <SelectItem value="simple_score">Score simple</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Classifier (etiqueta): GET /results/my does not filter by it. */}
+              {!isOwnView && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                    Etiqueta
+                  </span>
+                  <Select
+                    value={filterClassifier || "all"}
+                    onValueChange={(v) => {
+                      setFilterClassifier(v === "all" ? "" : v);
+                      resetResultsPage();
+                    }}
+                  >
+                    <SelectTrigger className="h-10 w-44 rounded-pill border-mathe-border">
+                      <SelectValue placeholder="Cualquier etiqueta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Cualquiera</SelectItem>
+                      <SelectItem value="xgboost">XGBoost</SelectItem>
+                      <SelectItem value="simple_score">Score simple</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Clear */}
               {hasFilters && (
@@ -843,7 +914,9 @@ export function StudentResultsHistoryPage() {
                 <p className="mt-1 text-sm text-mathe-muted">
                   {hasFilters
                     ? "Prueba ajustando o limpiando los filtros."
-                    : "Este estudiante aún no ha completado ningún cuestionario."}
+                    : isOwnView
+                      ? "Aún no has completado ningún cuestionario."
+                      : "Este estudiante aún no ha completado ningún cuestionario."}
                 </p>
               </div>
               {hasFilters && (

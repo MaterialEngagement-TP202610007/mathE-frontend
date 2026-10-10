@@ -93,6 +93,12 @@ const router = createBrowserRouter([
                   { path: "historial-validacion", element: <ValidationHistoryPage /> },
                   { path: "historial-validacion/:id", element: <ValidationHistoryDetailPage /> },
                   { path: "reportes", element: <ReportsPage /> },
+                ],
+              },
+              {
+                // Teachers open any student's evolution; a student only their own (HU-34).
+                element: <ProtectedRoute allowedRoles={SCHOOL_ROLES} studentOwnParam="studentId" />,
+                children: [
                   {
                     path: "evolucion/estudiante/:studentId",
                     element: <StudentResultsHistoryPage />,
