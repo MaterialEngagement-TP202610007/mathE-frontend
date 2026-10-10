@@ -33,7 +33,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 - [x] A3 `feat/hu-compliance-fe-a3` — dashboard and profile: HU-04/11 real totals, HU-05/12 zod per-field validation.
 - [x] A4 `feat/hu-compliance-fe-a4` — question lists: HU-40 content-type badge, HU-46 S2 style-specific empty
   message, HU-58/60 MVI status column + "Aprobada sobre MVI" marker.
-- [ ] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
+- [x] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
   HU-35 S2 mark `result_available` notification read on detail open, HU-54 S1 error panel with support link.
 - [ ] A6 `feat/hu-compliance-fe-a6` — HU-15 per-role routes, HU-34 student evolution access + presets + min-two message.
 - [ ] A7 `feat/hu-compliance-fe-a7` — HU-44 label correction screen (`PATCH /api/results/:id/correct-label`).
@@ -118,7 +118,29 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   when `mviStatus` is present (non-null/undefined), so legacy production rows show no "Sin validar" noise; the marker
   renders only when `approvedOverMvi` is true. Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint`
   pass. Production safety: display-only, no new endpoint, no request change, all read fields already optional.
+- A5 done on `feat/hu-compliance-fe-a5` (route: delegated direct, writer trigger; ~300 authored lines). Commits:
+  `51d4f9c` HU-36 S2 grade selector restored in `ReportsPage` ("Todos los grados" + the 11 academic grades). It filters
+  the results table through the existing `gradeId` param of `GET /api/results` (verified on backend `origin/main`: filters
+  `student.academicGradeId`) and scopes the by-grade chart on the client from the already-loaded
+  `GET /results/stats/school/:id/by-grade` data. Selecting a grade switches the chart to that grade's level; switching
+  the level to the other one resets the grade to "all" so chart and table never show different scopes. Grades with
+  `evaluatedStudents === 0` or all-null averages are dropped from the chart (null averages are never drawn as 0% bars);
+  a selected grade without data shows "No hay datos para este grado" in the chart and in the table empty state.
+  `GradeStats` now types `evaluatedStudents?` and nullable averages, matching the backend. `828f71d` HU-35 S2 new
+  `notifications/utils/mark-result-notification-read.ts`: when a student opens `ResultDetailPage`, it lists unread
+  notifications (`GET /notifications?unread=true`, default page), marks every unread `result_available` with a matching
+  `resultId` via the existing `PATCH /notifications/:id/read`, then re-reads `GET /notifications/unread-count` into the
+  store so the topbar badge drops exactly once (StrictMode-safe). Student-only (notifications are student-scoped);
+  fire-and-forget with a silent catch. `84cca3b` HU-54 S1 shared `src/components/shared/ErrorPanel.tsx` (title, message,
+  "Reintentar", optional "Contactar soporte" mailto); new optional `VITE_SUPPORT_EMAIL` in `ENV.SUPPORT_EMAIL` +
+  `getSupportMailto()` (unset hides the link), documented in `docs/FRONTEND-INTEGRATION.md`. `ResultDetailPage` shows the
+  panel (with "Volver") on load failure instead of redirecting to `/dashboard`; retry re-fetches. The quiz submit-failure
+  toast gains a "Contactar soporte" action only when the address is configured; submit logic unchanged.
+  Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint, no new
+  param (`gradeId`, `unread` already documented and deployed), env var optional. Pending (parent): add
+  `VITE_SUPPORT_EMAIL=` to `.env.example`. Decision: a 403/404 on the result detail now shows the error panel (with
+  "Volver") instead of the previous silent redirect.
 
 ## Next step
 
-A5.
+A6.
