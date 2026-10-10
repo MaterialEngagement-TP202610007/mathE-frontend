@@ -247,6 +247,12 @@ interface Question {
     id: number; questionId: number; text: string; vakValue: "V" | "A" | "K";
     createdAt: string; updatedAt: string; deletedAt: string | null;
   }[];
+  // MVI diagnosis (teacher/admin only, optional: see "MVI diagnosis on questions")
+  mviStatus?: "passed" | "failed" | "unavailable" | "skipped" | null;
+  mviResult?: MviResult | null;
+  mviCatalogVersion?: string | null;
+  mviValidatedAt?: string | null;          // ISO date
+  approvedOverMvi?: boolean;               // approved despite mviStatus "failed"
 }
 
 interface Notification {
@@ -328,6 +334,50 @@ Email / password / roleId are **not** editable here.
 - `vakStyle` ∈ `"Visual" | "Auditory" | "Kinesthetic"`. `teacherId` defaults to the authenticated user.
 - `status` filter ∈ `pending | approved | rejected` (omit for all).
 - Generation can return `502` (Gemini failed) or `503` (couldn't produce a unique, non-redundant question after max attempts). Show a retry affordance. **Generation is slow** (AI + embedding round-trips) — show a spinner and allow ~10–30s.
+
+#### MVI diagnosis on questions (teacher/admin only)
+
+`GET /:id` and the `/my*` lists attach the diagnosis of MVI (the external item validation
+engine) to each question. Students never receive these fields; the frontend never calls MVI.
+
+| Field | Meaning |
+|-------|---------|
+| `mviStatus` | `passed` (no blocking violation), `failed` (blocking violations remain), `unavailable` (MVI did not answer at generation time), `skipped` (integration off), `null` (never validated) |
+| `mviResult` | `MviResult` (below) or `null` |
+| `mviCatalogVersion` | Rule catalog version used for the diagnosis |
+| `mviValidatedAt` | ISO date of the diagnosis |
+| `approvedOverMvi` | `true` when a teacher approved the question while `mviStatus` was `failed` |
+
+```ts
+type MviSeverity = "blocking" | "warning";   // blocking rejects; warning is only an observation
+interface MviViolation { ruleId: string; message: string; measuredValue: number | string | null; threshold: number | null; severity: MviSeverity }
+interface MviHistoryEntry {
+  attempt: number;                           // 1-based
+  kind: "generation" | "revision" | "revalidation";
+  statement: string;
+  options: { text: string; vakValue: "V" | "A" | "K" }[];
+  approved: boolean;
+  violations: MviViolation[];
+  validatedAt: string;
+}
+interface MviRule { id: string; description: string; threshold: number | null; severity: MviSeverity }
+interface MviResult {
+  approved: boolean;
+  attempts: number;                          // includes malformed drafts: history.length can be lower
+  violations: MviViolation[];                // violations of the saved text
+  history?: MviHistoryEntry[];               // oldest first; absent on older questions
+  rules?: MviRule[];                         // catalog snapshot; absent on older questions
+}
+```
+
+Frontend fallbacks (`src/features/questions/components/MviAnalysisDialog.tsx`):
+
+- The production backend may not send these fields yet: all are optional in the `Question`
+  type; missing means `null` (`approvedOverMvi`: `false`) and renders as "Sin validar".
+- A rule "failed" in an attempt when any violation with that `ruleId` exists in that attempt.
+- No `history` → show only the final `violations` with a legacy note. No `rules` → hide the
+  criteria checklist. `unavailable` / `skipped` / `null` → short explanation, no timeline.
+- Approval is never blocked by MVI; approving a `failed` question just records `approvedOverMvi`.
 
 ### Questionnaires — `/api/questionnaires` (all 🔑)
 | Method | Path | Roles | Body | Returns |
