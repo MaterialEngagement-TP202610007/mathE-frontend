@@ -40,7 +40,7 @@ Out of scope: exposing `POST /api/questions/:id/validate` (optional per backend 
 ## Tasks
 
 - [x] T1 — Types + docs: extend `Question` with MVI fields and types; update `docs/FRONTEND-INTEGRATION.md`.
-- [ ] T2 — Rule dictionary + `MviStatusBadge`.
+- [x] T2 — Rule dictionary + `MviStatusBadge`.
 - [ ] T3 — `MviAnalysisDialog` with summary, timeline, checklist, footer and fallbacks.
 - [ ] T4 — Wiring in both pages + `ConfirmModal` observation line.
 
@@ -69,8 +69,9 @@ Forecast: ~450 authored changed lines. Strategy: `ask-on-risk` (chain strategy a
 ## Progress
 
 - Branch created. Feature document created.
-- T1 done: MVI types added to `question.interface.ts` (all `Question` MVI fields optional); MVI section added to `docs/FRONTEND-INTEGRATION.md`. `pnpm build`: pass. `pnpm lint`: pass (0 problems).
+- T1 done: MVI types added to `question.interface.ts` (all `Question` MVI fields optional); MVI section added to `docs/FRONTEND-INTEGRATION.md`. `pnpm build`: pass. `pnpm lint`: pass (0 problems). Commit `47edb2a`.
+- T2 done: `utils/mvi-rules.ts` (10 known rules + catalog `description` fallback) and `components/MviStatusBadge.tsx` (VakBadge pattern). `pnpm build`: pass. `pnpm lint`: pass.
 
 ## Next step
 
-T2.
+T3.
