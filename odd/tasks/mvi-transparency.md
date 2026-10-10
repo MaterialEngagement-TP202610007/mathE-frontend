@@ -41,7 +41,7 @@ Out of scope: exposing `POST /api/questions/:id/validate` (optional per backend 
 
 - [x] T1 — Types + docs: extend `Question` with MVI fields and types; update `docs/FRONTEND-INTEGRATION.md`.
 - [x] T2 — Rule dictionary + `MviStatusBadge`.
-- [ ] T3 — `MviAnalysisDialog` with summary, timeline, checklist, footer and fallbacks.
+- [x] T3 — `MviAnalysisDialog` with summary, timeline, checklist, footer and fallbacks.
 - [ ] T4 — Wiring in both pages + `ConfirmModal` observation line.
 
 ## Acceptance criteria
@@ -70,8 +70,9 @@ Forecast: ~450 authored changed lines. Strategy: `ask-on-risk` (chain strategy a
 
 - Branch created. Feature document created.
 - T1 done: MVI types added to `question.interface.ts` (all `Question` MVI fields optional); MVI section added to `docs/FRONTEND-INTEGRATION.md`. `pnpm build`: pass. `pnpm lint`: pass (0 problems). Commit `47edb2a`.
-- T2 done: `utils/mvi-rules.ts` (10 known rules + catalog `description` fallback) and `components/MviStatusBadge.tsx` (VakBadge pattern). `pnpm build`: pass. `pnpm lint`: pass.
+- T2 done: `utils/mvi-rules.ts` (10 known rules + catalog `description` fallback) and `components/MviStatusBadge.tsx` (VakBadge pattern). `pnpm build`: pass. `pnpm lint`: pass. Commit `e4655fb`.
+- T3 done: `utils/mvi.ts` (field resolution, rule outcome, corrected-next detection, summary) and `components/MviAnalysisDialog.tsx` (own pill trigger; summary, timeline with native `<details>` options, criteria checklist, catalog footer, legacy/unavailable/skipped/null fallbacks). `pnpm build`: pass. `pnpm lint`: pass.
 
 ## Next step
 
-T3.
+T4.
