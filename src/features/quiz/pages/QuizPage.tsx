@@ -23,11 +23,12 @@ import type {
  *  checking   → resolve localStorage / accepted / GET active
  *  choosing   → an active questionnaire exists: continue it or start a new one
  *  generating → POST /questionnaires in flight
+ *  error      → generation failed: stay on screen with "Reintentar"
  *  ready      → POST succeeded, waiting for user to click "Continuar"
  *  questions  → active quiz
  *  result     → quiz submitted, showing result summary inline
  */
-type Phase = "checking" | "choosing" | "generating" | "ready" | "questions" | "result"
+type Phase = "checking" | "choosing" | "generating" | "error" | "ready" | "questions" | "result"
 
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
@@ -39,6 +40,7 @@ export function QuizPage() {
   const [manualAbandon, setManualAbandon] = useState(false)
   const [quizResult, setQuizResult] = useState<QuizCompletionResult | null>(null)
   // Active questionnaire fetched after a 409; only loaded into the store if the student continues it.
+  const [generationError, setGenerationError] = useState<string | null>(null)
   const [pendingActive, setPendingActive] = useState<QuestionnaireResponse | null>(null)
   const localQuestionnaireId = useQuizStore((s) => s.session?.questionnaireId ?? null)
   const abandonedRef = useRef(false)
@@ -120,8 +122,9 @@ export function QuizPage() {
           }
         }
 
-        toast.error(getErrorMessage(error, "No se pudo generar el cuestionario. Intenta de nuevo."))
-        navigate(ROUTING.DASHBOARD, { replace: true })
+        // Keep the student here with a retry instead of bouncing them to the dashboard.
+        setGenerationError(getErrorMessage(error, "No se pudo generar el cuestionario. Intenta de nuevo."))
+        setPhase("error")
       })
       // Consent is single-use: returning to /cuestionario must not create another questionnaire.
       .finally(() => resetQuizIntro())
@@ -153,6 +156,13 @@ export function QuizPage() {
   const handleAbandonCancel = () => {
     setManualAbandon(false)
     if (blocker.state === "blocked") blocker.reset()
+  }
+
+  // Re-runs the same creation flow (including the active-questionnaire check).
+  const handleRetryGeneration = () => {
+    setGenerationError(null)
+    createStartedRef.current = false
+    setPhase("generating")
   }
 
   const handleContinueActive = () => {
@@ -224,7 +234,9 @@ export function QuizPage() {
         ) : (
           <GeneratingQuiz
             ready={phase === "ready"}
+            error={phase === "error" ? generationError : null}
             onContinue={() => setPhase("questions")}
+            onRetry={handleRetryGeneration}
           />
         )}
       </main>
