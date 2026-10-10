@@ -16,6 +16,7 @@ import { questionService } from "../services/question.service"
 import type { Question, QuestionStatus, VakStyleApi } from "../interfaces/question.interface"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { ContentTypeBadge } from "../components/ContentTypeBadge"
+import { MviRowMarkers } from "../components/MviStatusBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
 import { ROUTING } from "@/config/constant.config"
@@ -439,6 +440,11 @@ export function ValidationHistoryPage() {
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xs truncate text-sm text-mathe-ink">{q.statement}</p>
+                    <MviRowMarkers
+                      mviStatus={q.mviStatus}
+                      approvedOverMvi={q.approvedOverMvi}
+                      className="mt-1.5"
+                    />
                   </td>
                   <td className="px-3 py-4">
                     <VakBadge style={toSpanishStyle(q.vakStyle)} />

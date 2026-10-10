@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/http"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
 import { ContentTypeBadge } from "../components/ContentTypeBadge"
+import { MviRowMarkers } from "../components/MviStatusBadge"
 import { SchoolRequiredNotice } from "../components/SchoolRequiredNotice"
 import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "../utils/school-scope"
 import { useQuestionGenerationStore } from "../store/question-generation.store"
@@ -399,6 +400,11 @@ export function PendingQuestionsPage() {
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xl truncate text-sm text-mathe-ink">{q.statement}</p>
+                    <MviRowMarkers
+                      mviStatus={q.mviStatus}
+                      approvedOverMvi={q.approvedOverMvi}
+                      className="mt-1.5"
+                    />
                   </td>
                   <td className="px-3 py-4">
                     <VakBadge style={toSpanishStyle(q.vakStyle)} />
