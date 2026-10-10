@@ -38,6 +38,27 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 - [x] A6 `feat/hu-compliance-fe-a6` — HU-15 per-role routes, HU-34 student evolution access + presets + min-two message.
 - [x] A7 `feat/hu-compliance-fe-a7` — HU-44 label correction screen (`PATCH /api/results/:id/correct-label`).
 
+## Phase B (backend chain `feat/hu-compliance-be1..be5`, head fb346c8, not deployed)
+
+Contract: backend `docs/FRONTEND_INTEGRATION.md` on `feat/hu-compliance-be5`. Chain continues from a7:
+`feat/hu-compliance-fe-b1` from `feat/hu-compliance-fe-a7`, each next slice from the previous one.
+
+Deploy-order constraint (production safety): phase B branches must ship only after backend be1..be5 are deployed.
+Every new call must degrade gracefully on the current backend (404/400 → keep today's behaviour, no crash, no
+blocking error), and every new response field is optional.
+
+- [ ] B1 `feat/hu-compliance-fe-b1` — HU-29 S1 server autosave (`PUT /questionnaires/:id/answers`) + resume from
+  `GET /questionnaires/active` (`answers`, `answeredCount`, `resumeIndex`) + `PATCH /:id/complete` 503 "answers saved" retry.
+- [ ] B2 `feat/hu-compliance-fe-b2` — HU-42 approve style selector (default current style, mandatory, 400 mismatch message);
+  HU-47 AI-down/restored banner (SSE `question_failed.reason`, `ai_service_restored`, `GET /api/health` `aiGeneration` on load).
+- [ ] B3 `feat/hu-compliance-fe-b3` — reports: HU-51 period selector (`period`/`from`/`to`), HU-48 `styleCounts` by grade,
+  HU-50 stats cards (`completionRate`, `avgResponseTimeSeconds`, "Datos insuficientes").
+- [ ] B4 `feat/hu-compliance-fe-b4` — HU-49 CSV export (blob, `Content-Disposition` filename, 404 "No hay datos para exportar");
+  HU-37 student search (`?search=`).
+- [ ] B5 `feat/hu-compliance-fe-b5` — HU-38 stability monitor (`/stats/school/:id/stability`) + single-result `profile: null` copy.
+- [ ] B6 `feat/hu-compliance-fe-b6` — HU-44 correction audit (`correctedVakLabel`, `correctedAt`, `correctedBy`, labeling list
+  `labelStatus=corrected|uncorrected`); HU-35 live `result_available` SSE toast + notification refresh.
+
 ## Checks
 
 No test runner (test-first exception: no runnable RED). Per slice: `tsc -b`, `eslint .`, `vite build`
