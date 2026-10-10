@@ -25,6 +25,9 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
+import { useAuthStore } from "@/features/auth/store/auth.store"
+import { markResultNotificationRead } from "@/features/notifications/utils/mark-result-notification-read"
+import { ROLE } from "@/config/constant.config"
 import { resultService } from "../services/result.service"
 import { lookupVak, toDisplayStyle, vakColors } from "../utils/vak"
 import {
@@ -129,6 +132,15 @@ export function ResultDetailPage() {
       .catch(() => navigate("/dashboard", { replace: true }))
       .finally(() => setLoading(false))
   }, [id, navigate])
+
+  // HU-35: opening a result marks its `result_available` notification as read.
+  // Notifications are student-only; failures are silent and never affect the page.
+  const roleId = useAuthStore((s) => s.roleId)
+  const loadedResultId = result?.id
+  useEffect(() => {
+    if (roleId !== ROLE.STUDENT || loadedResultId === undefined) return
+    markResultNotificationRead(loadedResultId).catch(() => {})
+  }, [roleId, loadedResultId])
 
   const handleExport = async () => {
     if (!reportRef.current || !result) return
