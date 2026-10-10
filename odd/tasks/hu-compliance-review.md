@@ -28,7 +28,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
 - [x] A1 `feat/hu-compliance-fe-a1` — result and quiz display: HU-28 feedback source, HU-30/32 secondary style,
   HU-52 provisional notice, HU-21 S1 media placeholder, HU-19 S2 block "Siguiente" without answer,
   HU-02/09 send `acceptTerms: true`.
-- [ ] A2 `feat/hu-compliance-fe-a2` — quiz session flow: HU-16/29 S2 active questionnaire dialog,
+- [x] A2 `feat/hu-compliance-fe-a2` — quiz session flow: HU-16/29 S2 active questionnaire dialog,
   HU-17 S2 generation error + "Reintentar", HU-07/14 S2 idle logout (~30 min) + S1 quiz header logout.
 - [ ] A3 `feat/hu-compliance-fe-a3` — dashboard and profile: HU-04/11 real totals, HU-05/12 zod per-field validation.
 - [ ] A4 `feat/hu-compliance-fe-a4` — question lists: HU-40 content-type badge, HU-46 S2 style-specific empty
@@ -65,7 +65,25 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   Note: the recovery mapper in `src/features/quiz/utils/complete-questionnaire.ts` (outside A1 surface) drops
   `secondaryStyle`; the probability fallback covers it. The sidebar "Finalizar cuestionario" still opens the review screen,
   whose submit already requires all answers.
+- A2 done on `feat/hu-compliance-fe-a2` (route: delegated direct, writer trigger; ~520 authored lines, over the advisory
+  heuristic because three HUs share the quiz page). Commits: `a1c06f2` HU-16/29 S2 reusable
+  `ActiveQuestionnaireDialog` ("Continuar" / "Iniciar nuevo"; start-new calls the existing abandon endpoint, treats
+  "already abandoned" as success, clears the local quiz session and sets availability to available; on failure toasts and
+  stays usable) used from the 409 branch of `QuizPage`, from `QuizPage` when consent arrives with a local in-progress
+  session (sidebar "Nuevo cuestionario"), and from every DashboardHome start/resume CTA; dashboard "Iniciar nuevo" reopens
+  the terms modal so the new questionnaire still requires fresh consent. `8a10233` HU-17 S2 generation error state on
+  `GeneratingQuiz` with "Reintentar" (re-runs the same creation flow, including the 409 check) and "Volver al inicio";
+  no toast/redirect. `1d4bccc` HU-07/14 S2 `useIdleLogout` (30 min `IDLE_LOGOUT_MS`; pointer/key/wheel/touch/scroll
+  throttled to one reset per 5 s via timers and refs; last activity shared across tabs in localStorage so an active tab
+  keeps the shared cookie session alive; returning to a tab already idle past the limit logs out instead of extending)
+  mounted in `DashboardLayout` and `QuizPage` (quiz route is outside the layout); signs out through the store `logout`
+  with new options `{ keepQuiz, reason }` and the login screen shows "Tu sesión se cerró por inactividad." from an
+  in-memory `logoutReason`. HU-07/14 S1 "Cerrar sesión" in the quiz header, with a confirm dialog while answering;
+  the questionnaire is not abandoned and the local copy is kept (`keepQuiz`). Checks: `pnpm build` pass (existing
+  chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint, no request-shape change (abandon and logout
+  already exist); Sidebar `logout()` call unchanged. Decision: no explicit "submission in flight" guard; the submit
+  click resets the idle timer and submission finishes within seconds, far below 30 minutes.
 
 ## Next step
 
-A2.
+A3.
