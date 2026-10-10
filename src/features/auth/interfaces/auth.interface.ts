@@ -36,4 +36,6 @@ export interface RegisterPayload {
   /** Required for students and teachers (backend returns 400 otherwise). */
   schoolId: number
   academicGradeId?: number
+  /** Explicit consent to the terms (HU-02/HU-09); sent only when accepted. */
+  acceptTerms?: true
 }
