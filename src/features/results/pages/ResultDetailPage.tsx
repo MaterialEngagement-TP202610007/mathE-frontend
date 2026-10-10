@@ -24,6 +24,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { ErrorPanel } from "@/components/shared/ErrorPanel"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { useAuthStore } from "@/features/auth/store/auth.store"
 import { markResultNotificationRead } from "@/features/notifications/utils/mark-result-notification-read"
@@ -124,14 +125,29 @@ export function ResultDetailPage() {
   const [result, setResult] = useState<QuizResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  // HU-54: a failed load shows a retryable error panel instead of silently redirecting.
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(false)
     resultService
       .getById(Number(id))
-      .then(setResult)
-      .catch(() => navigate("/dashboard", { replace: true }))
-      .finally(() => setLoading(false))
-  }, [id, navigate])
+      .then((data) => {
+        if (!cancelled) setResult(data)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, reloadKey])
 
   // HU-35: opening a result marks its `result_available` notification as read.
   // Notifications are student-only; failures are silent and never affect the page.
@@ -203,7 +219,28 @@ export function ResultDetailPage() {
     )
   }
 
-  if (!result) return null
+  if (loadError || !result) {
+    return (
+      <div className="grid gap-6 pb-10">
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-pill border border-mathe-border bg-mathe-white px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-surface hover:text-mathe-ink"
+          >
+            <ArrowLeft className="size-4" />
+            Volver
+          </button>
+        </div>
+        <ErrorPanel
+          title="No pudimos cargar este resultado"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => setReloadKey((k) => k + 1)}
+          supportSubject={`Math.E: error al cargar el resultado ${id ?? ""}`.trim()}
+        />
+      </div>
+    )
+  }
 
   // ── Derived values ────────────────────────────────────────────────────────
 

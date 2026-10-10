@@ -26,6 +26,14 @@ The server enables CORS with `credentials: true`, origin from env `CORS_ORIGIN` 
 
 Cookie flags: `HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/`. `Secure` works on `http://localhost` in Chrome/Firefox (localhost is a secure context). For a non-localhost dev host over plain HTTP, the cookie won't be sent — use HTTPS or localhost.
 
+### Frontend environment variables
+Read through `src/config/env.config.ts` (`ENV`); never access `import.meta.env` directly.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | no | Backend host, no `/api` suffix. Keep **unset** on Netlify (`/api/*` is proxied same-origin). |
+| `VITE_SUPPORT_EMAIL` | no | Support address for the "Contactar soporte" link on error screens (`ErrorPanel`) and the quiz submit-failure toast (HU-54). When unset, the link is hidden; no address is invented. Frontend-only, no backend change. |
+
 ---
 
 ## 2. Roles & RBAC

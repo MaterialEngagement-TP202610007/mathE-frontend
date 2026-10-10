@@ -9,6 +9,7 @@ import {
   TriangleAlert,
 } from "lucide-react"
 import { toast } from "sonner"
+import { getSupportMailto } from "@/config/env.config"
 import { getErrorMessage } from "@/lib/http"
 import { cn } from "@/lib/utils"
 import { useQuizStore } from "../store/quiz.store"
@@ -103,8 +104,20 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
         onAbandoned()
         return
       }
+      // HU-54: offer the support contact on submit failures when one is configured.
+      const supportHref = getSupportMailto("Math.E: error al enviar el cuestionario")
       toast.error(
         getErrorMessage(error, "No se pudo enviar el cuestionario. Intenta de nuevo."),
+        supportHref
+          ? {
+              action: {
+                label: "Contactar soporte",
+                onClick: () => {
+                  window.location.href = supportHref
+                },
+              },
+            }
+          : undefined,
       )
       submittingRef.current = false
       setRunnerPhase("review")
