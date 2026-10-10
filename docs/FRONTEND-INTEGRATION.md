@@ -350,7 +350,7 @@ engine) to each question. Students never receive these fields; the frontend neve
 
 ```ts
 type MviSeverity = "blocking" | "warning";   // blocking rejects; warning is only an observation
-interface MviViolation { ruleId: string; message: string; measuredValue: number | string | null; threshold: number | null; severity: MviSeverity }
+interface MviViolation { ruleId: string; message: string; measuredValue: unknown; threshold: unknown; severity: MviSeverity }
 interface MviHistoryEntry {
   attempt: number;                           // 1-based
   kind: "generation" | "revision" | "revalidation";

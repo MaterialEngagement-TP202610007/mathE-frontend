@@ -43,6 +43,7 @@ Out of scope: exposing `POST /api/questions/:id/validate` (optional per backend 
 - [x] T2 — Rule dictionary + `MviStatusBadge`.
 - [x] T3 — `MviAnalysisDialog` with summary, timeline, checklist, footer and fallbacks.
 - [x] T4 — Wiring in both pages + `ConfirmModal` observation line.
+- [x] T5 — Backend integration review fixes: checklist from `result.violations` (saved text), "Versión guardada" badge, corrections only on `revision`, violation `measuredValue`/`threshold` as `unknown`.
 
 ## Acceptance criteria
 
@@ -74,7 +75,8 @@ Forecast: ~450 authored changed lines. Strategy: `ask-on-risk` (chain strategy a
 - T3 done: `utils/mvi.ts` (field resolution, rule outcome, corrected-next detection, summary) and `components/MviAnalysisDialog.tsx` (own pill trigger; summary, timeline with native `<details>` options, criteria checklist, catalog footer, legacy/unavailable/skipped/null fallbacks). `pnpm build`: pass. `pnpm lint`: pass. Commit `b2d508a`.
 - T4 done: `MviStatusBadge` + `MviAnalysisDialog` trigger in the "Validar pregunta" panel (`QuestionReviewPage`) and the "Resultado de validación" card (`ValidationHistoryDetailPage`, plus "Aprobada pese a observaciones del motor" when `approvedOverMvi`); `ConfirmModal` shows the MVI observation line when approving a `failed` question (copy only, no payload change). `pnpm build`: pass. `pnpm lint`: pass. Commit `ed65ff7`. Not checked: visual run in the browser against a backend that sends MVI fields.
 - RDD: range `release..ed65ff7` assessed medium (`slice_budget_reached`, 860 lines); consent granted; `review-reliability` lens approved with no findings; acknowledged (lineage `review-44ca167cf27b6041`).
+- T5 done (backend integration review): `CriteriaChecklist` now uses `result.violations` (on failed questions the backend saves the attempt with the fewest blocking violations, not the last one); timeline marks the latest entry matching `question.statement` as "Versión guardada"; "Corregido en el intento siguiente" only when the next entry is a `revision`; violation `measuredValue`/`threshold` widened to `unknown`. `pnpm build`: pass. `pnpm lint`: pass.
 
 ## Next step
 
-Visual check of the dialog with real MVI data (backend `feat/mvi-transparency`), then push/PR as a user decision; ~860 lines exceeds the delivery budget, so ask chain strategy (`stacked-to-main` or `feature-branch-chain`) or single PR before opening it.
+Push and PR into `release` (user decision), linking backend PR MaterialEngagement-TP202610007/mathE-backend#1 as a dependency.

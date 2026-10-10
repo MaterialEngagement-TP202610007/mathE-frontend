@@ -32,6 +32,7 @@ import {
   getMviSummary,
   getRuleOutcome,
   getRulesCorrectedNext,
+  getSavedAttemptIndex,
   sortViolations,
   type MviDiagnosis,
   type MviQuestionFields,
@@ -156,10 +157,12 @@ function AttemptItem({
   entry,
   rules,
   corrected,
+  isSaved,
 }: {
   entry: MviHistoryEntry
   rules: RulesById
   corrected: Set<string>
+  isSaved: boolean
 }) {
   return (
     <li className="relative pb-6 pl-7 last:pb-0">
@@ -184,6 +187,11 @@ function AttemptItem({
         >
           {entry.approved ? "Aprobado" : "Rechazado"}
         </span>
+        {isSaved && (
+          <span className="rounded-pill bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-mathe-blue">
+            Versión guardada
+          </span>
+        )}
       </div>
 
       <p className="mt-2 rounded-xl border border-mathe-border bg-mathe-surface p-3 text-sm leading-snug text-mathe-ink">
@@ -227,7 +235,16 @@ function AttemptItem({
   )
 }
 
-function AttemptTimeline({ history, rules }: { history: MviHistoryEntry[]; rules: RulesById }) {
+function AttemptTimeline({
+  history,
+  rules,
+  savedStatement,
+}: {
+  history: MviHistoryEntry[]
+  rules: RulesById
+  savedStatement: string
+}) {
+  const savedIndex = getSavedAttemptIndex(history, savedStatement)
   return (
     <section className="grid gap-3">
       <SectionTitle>Recorrido por intento</SectionTitle>
@@ -238,6 +255,7 @@ function AttemptTimeline({ history, rules }: { history: MviHistoryEntry[]; rules
             entry={entry}
             rules={rules}
             corrected={getRulesCorrectedNext(history, index)}
+            isSaved={index === savedIndex}
           />
         ))}
       </ol>
@@ -305,16 +323,15 @@ function CriteriaChecklist({
 
 // ── Body ──────────────────────────────────────────────────────────────────────
 
-function DiagnosisBody({ result }: { result: MviResult }) {
+function DiagnosisBody({ result, savedStatement }: { result: MviResult; savedStatement: string }) {
   const rules: RulesById = new Map((result.rules ?? []).map((r) => [r.id, r]))
   const history = result.history ?? []
   const hasHistory = history.length > 0
-  const finalViolations = hasHistory ? history[history.length - 1].violations : result.violations
 
   return (
     <>
       {hasHistory ? (
-        <AttemptTimeline history={history} rules={rules} />
+        <AttemptTimeline history={history} rules={rules} savedStatement={savedStatement} />
       ) : (
         <section className="grid gap-3">
           <SectionTitle>Observaciones finales</SectionTitle>
@@ -323,7 +340,9 @@ function DiagnosisBody({ result }: { result: MviResult }) {
         </section>
       )}
       {result.rules && result.rules.length > 0 && (
-        <CriteriaChecklist rules={result.rules} violations={finalViolations} />
+        // `result.violations` always describes the saved text; on a failed question the
+        // backend keeps the attempt with the fewest blocking violations, not the last one.
+        <CriteriaChecklist rules={result.rules} violations={result.violations} />
       )}
     </>
   )
@@ -407,7 +426,7 @@ export function MviAnalysisDialog({ question, triggerClassName }: MviAnalysisDia
 
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">
           {result ? (
-            <DiagnosisBody result={result} />
+            <DiagnosisBody result={result} savedStatement={question.statement} />
           ) : (
             explanation && <Notice icon={explanation.icon}>{explanation.text}</Notice>
           )}

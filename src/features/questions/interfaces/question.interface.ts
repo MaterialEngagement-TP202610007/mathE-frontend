@@ -22,8 +22,8 @@ export type MviAttemptKind = "generation" | "revision" | "revalidation"
 export interface MviViolation {
   ruleId: string
   message: string
-  measuredValue: number | string | null
-  threshold: number | null
+  measuredValue: unknown
+  threshold: unknown
   severity: MviSeverity
 }
 

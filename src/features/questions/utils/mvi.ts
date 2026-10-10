@@ -10,7 +10,7 @@ import type {
 /** MVI fields of a question, as consumed by the MVI UI. */
 export type MviQuestionFields = Pick<
   Question,
-  "mviStatus" | "mviResult" | "mviCatalogVersion" | "mviValidatedAt" | "approvedOverMvi"
+  "statement" | "mviStatus" | "mviResult" | "mviCatalogVersion" | "mviValidatedAt" | "approvedOverMvi"
 >
 
 /** MVI fields with every optional value resolved (missing → `null` / `false`). */
@@ -65,15 +65,27 @@ export function sortViolations(violations: MviViolation[]): MviViolation[] {
 
 /**
  * Rule ids that failed in `history[index]` and have no violation in the next entry.
- * The last entry never has corrections (there is no following attempt).
+ * Only a `revision` rewrites the text: a rule disappearing on a `revalidation` means the
+ * catalog changed, not that the text was corrected. The last entry never has corrections.
  */
 export function getRulesCorrectedNext(history: MviHistoryEntry[], index: number): Set<string> {
   const next = history[index + 1]
-  if (!next) return new Set()
+  if (!next || next.kind !== "revision") return new Set()
   const stillFailing = new Set(next.violations.map((v) => v.ruleId))
   return new Set(
     history[index].violations.map((v) => v.ruleId).filter((id) => !stillFailing.has(id)),
   )
+}
+
+/**
+ * Index of the latest history entry whose statement matches the saved question text,
+ * or -1 when none matches (e.g. the statement was edited after validation).
+ */
+export function getSavedAttemptIndex(history: MviHistoryEntry[], savedStatement: string): number {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].statement === savedStatement) return i
+  }
+  return -1
 }
 
 /** "El motor revisó esta pregunta en N intento(s) y …". */
