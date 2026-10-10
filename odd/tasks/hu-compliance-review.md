@@ -35,7 +35,7 @@ Phase B (backend-dependent) waits for contracts from `backend-f7`.
   message, HU-58/60 MVI status column + "Aprobada sobre MVI" marker.
 - [x] A5 `feat/hu-compliance-fe-a5` — results and reports: HU-36 S2 grade selector + empty grade message,
   HU-35 S2 mark `result_available` notification read on detail open, HU-54 S1 error panel with support link.
-- [ ] A6 `feat/hu-compliance-fe-a6` — HU-15 per-role routes, HU-34 student evolution access + presets + min-two message.
+- [x] A6 `feat/hu-compliance-fe-a6` — HU-15 per-role routes, HU-34 student evolution access + presets + min-two message.
 - [ ] A7 `feat/hu-compliance-fe-a7` — HU-44 label correction screen (`PATCH /api/results/:id/correct-label`).
 
 ## Checks
@@ -140,7 +140,48 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   param (`gradeId`, `unread` already documented and deployed), env var optional. Pending (parent): add
   `VITE_SUPPORT_EMAIL=` to `.env.example`. Decision: a 403/404 on the result detail now shows the error panel (with
   "Volver") instead of the previous silent redirect.
+- A6 done on `feat/hu-compliance-fe-a6` (route: delegated direct, writer trigger; ~250 authored lines). Commits:
+  `26249de` HU-15 per-role route groups in `AppRouter` (`STUDENT_ONLY`, `TEACHER_ONLY`, shared `SCHOOL_ROLES`);
+  `ProtectedRoute` now redirects a wrong role to `/dashboard` (the index every authenticated role may open: it renders
+  the role's home or sends admins to `/dashboard/profesores`, so no loop). `306931e` HU-34: `ProtectedRoute` gains
+  `studentOwnParam`; the evolution route admits teachers for any id and a student only when `:studentId` equals their
+  own `user.id` (otherwise `/dashboard`). `ResultsHistoryPage` adds "Ver mi evolución". `StudentResultsHistoryPage`
+  adds period presets "Todo" / "Últimos 3 meses" / "Último año" (new `utils/evolution-period.ts`; sends `from`
+  YYYY-MM-DD, local date, only for non-"Todo"; verified on backend `origin/main`: controller parses `from`/`to`,
+  use case uses `from` and `totalEvaluations` is range-scoped) and shows "Necesitas al menos dos resultados para
+  comparar" when the period has fewer than two results; with no results at all under "Todo" the original empty state
+  stays, and a failed load now says so instead of "no evaluations". Student view: results table uses the existing
+  `GET /results/my` (`startDate`/`endDate`/`predominantStyle`) because `GET /results/student/:id` is teacher/admin
+  only; the "Etiqueta" filter is hidden (not supported by `/results/my`); back button goes to the history.
+  `GET /users/:id` (self allowed) and `GET /results/stats/user/:id` (student own) already allow students.
+  Checks: `pnpm build` pass (existing chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint; only the
+  documented, deployed `from` param; admin routes unchanged. Decision: Sidebar unchanged: `navForRole`
+  (`src/features/dashboard/utils/nav.ts`) already lists only role-accessible items; the student evolution entry point is
+  the history page button (adding a sidebar item would need `nav.ts`, outside the A6 surface).
+
+  Route table (S student, T teacher, A admin; any other role is redirected to `/dashboard`):
+
+  | Route | Before | After |
+  | --- | --- | --- |
+  | `/cuestionario` | S, T | S |
+  | `/dashboard` (index), `/dashboard/perfil` | S, T, A | S, T, A |
+  | `/dashboard/profesores` | A | A |
+  | `/dashboard/notificaciones` | S, T | S, T |
+  | `/dashboard/resultados/:id` | S, T | S, T (students: own/notifications; teachers: reports, evolution) |
+  | `/dashboard/historial` | S, T | S |
+  | `/dashboard/preguntas`, `/preguntas/:id` | S, T | T |
+  | `/dashboard/historial-validacion`, `/:id` | S, T | T |
+  | `/dashboard/estudiantes`, `/dashboard/reportes` | S, T | T |
+  | `/dashboard/evolucion/estudiante/:studentId` | S, T (any id) | T (any id), S (own id only) |
+
+  Link audit: student-rendered targets (student Sidebar, `DashboardHome` student branch, `TermsModal`/quiz entry,
+  `ResultsHistoryPage`, `ResultSummary`, `ResultPage`, result notifications) point to quiz, history, result detail,
+  own evolution, profile, notifications. Teacher-rendered targets (teacher Sidebar, `TeacherDashboardHome`, question
+  pages, `StudentsPage`, `ReportsPage`, `StudentResultsHistoryPage`, `questions_generated` notifications, which the
+  backend sends only to the generating teacher) point to teacher routes, result detail, profile, notifications. Admin:
+  `DashboardHome` redirect to `profesores`, admin Sidebar (profesores, perfil), topbar profile; notifications are hidden
+  for admins in the topbar.
 
 ## Next step
 
-A6.
+A7.
