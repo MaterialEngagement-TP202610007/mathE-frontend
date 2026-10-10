@@ -11,31 +11,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { getErrorMessage } from "@/lib/http"
-import { questionnaireService } from "../services/questionnaire.service"
-import { useQuizStore } from "../store/quiz.store"
-import { useQuizStatusStore } from "../store/quiz-status.store"
-import { isQuestionnaireAbandoned } from "../utils/complete-questionnaire"
 
 interface ActiveQuestionnaireDialogProps {
   open: boolean
-  /** Id of the questionnaire that is still in progress server-side. */
-  questionnaireId: number | null
   /** Resume the active questionnaire. */
   onContinue: () => void
-  /** Runs once the active questionnaire was abandoned and the local session cleared. */
-  onStartNew: () => void
+  /**
+   * The student chose a new questionnaire. Abandoning the active one is up to
+   * the caller and must only happen after consent; a rejection keeps the
+   * dialog open and usable.
+   */
+  onStartNew: () => void | Promise<void>
   /** The dialog was closed without choosing (Escape, overlay or close button). */
   onDismiss: () => void
 }
 
 /**
  * Asks the student whether to resume the questionnaire already in progress or
- * abandon it and start a new one (HU-16 / HU-29). Abandoning reuses
- * `PATCH /questionnaires/:id/abandon`; on failure the dialog stays usable.
+ * start a new one (HU-16 / HU-29).
  */
 export function ActiveQuestionnaireDialog({
   open,
-  questionnaireId,
   onContinue,
   onStartNew,
   onDismiss,
@@ -43,25 +39,17 @@ export function ActiveQuestionnaireDialog({
   const [abandoning, setAbandoning] = useState(false)
 
   const handleStartNew = async () => {
-    if (questionnaireId === null || abandoning) return
+    if (abandoning) return
     setAbandoning(true)
     try {
-      await questionnaireService.abandon(questionnaireId)
+      await onStartNew()
     } catch (error) {
-      // Already abandoned (e.g. from another tab) is the state we want: carry on.
-      if (!isQuestionnaireAbandoned(error)) {
-        toast.error(
-          getErrorMessage(error, "No se pudo descartar el cuestionario en curso. Intenta de nuevo."),
-        )
-        setAbandoning(false)
-        return
-      }
+      toast.error(
+        getErrorMessage(error, "No se pudo descartar el cuestionario en curso. Intenta de nuevo."),
+      )
+    } finally {
+      setAbandoning(false)
     }
-    // The abandoned questionnaire must never be resumed from the local copy.
-    useQuizStore.getState().clearSession()
-    useQuizStatusStore.getState().setAvailability("available")
-    setAbandoning(false)
-    onStartNew()
   }
 
   return (
@@ -86,7 +74,7 @@ export function ActiveQuestionnaireDialog({
             type="button"
             variant="outline"
             onClick={handleStartNew}
-            disabled={abandoning || questionnaireId === null}
+            disabled={abandoning}
             className="h-11 rounded-pill px-6 font-semibold"
           >
             {abandoning ? (

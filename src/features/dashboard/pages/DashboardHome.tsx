@@ -135,6 +135,7 @@ export function DashboardHome() {
   const user = useAuthStore((s) => s.user)
   const roleId = useAuthStore((s) => s.roleId)
   const openQuizIntro = useQuizIntroStore((s) => s.open)
+  const openQuizIntroToReplace = useQuizIntroStore((s) => s.openToReplace)
   const quizSession = useQuizStore((s) => s.session)
   const navigate = useNavigate()
 
@@ -461,15 +462,16 @@ export function DashboardHome() {
 
       <ActiveQuestionnaireDialog
         open={activeDialogOpen}
-        questionnaireId={quizSession?.questionnaireId ?? null}
         onContinue={() => {
           setActiveDialogOpen(false)
           navigate(ROUTING.QUIZ)
         }}
         onStartNew={() => {
           setActiveDialogOpen(false)
-          // A new questionnaire still requires fresh consent (terms modal → /cuestionario).
-          openQuizIntro()
+          // Only record the intent: the quiz page abandons the active questionnaire after
+          // consent, right before creating the new one. Cancelling the terms abandons nothing.
+          if (quizSession) openQuizIntroToReplace(quizSession.questionnaireId)
+          else openQuizIntro()
         }}
         onDismiss={() => setActiveDialogOpen(false)}
       />

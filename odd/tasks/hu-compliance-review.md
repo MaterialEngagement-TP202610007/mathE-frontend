@@ -83,6 +83,12 @@ lines across 7 slices. Slice boundaries = one child branch per slice.
   chunk-size warning), `pnpm lint` pass. Production safety: no new endpoint, no request-shape change (abandon and logout
   already exist); Sidebar `logout()` call unchanged. Decision: no explicit "submission in flight" guard; the submit
   click resets the idle timer and submission finishes within seconds, far below 30 minutes.
+  Review fix (production safety, `fix(quiz): abandon active questionnaire only after consent`): dashboard
+  "Iniciar nuevo" now only records the intent (`replaceQuestionnaireId` in the quiz-intro store) and opens the terms
+  modal; cancelling the modal clears the intent and abandons nothing. The quiz page abandons the active questionnaire
+  only after consent, immediately before `POST /questionnaires` (abandon failure shows the retryable error state).
+  `ActiveQuestionnaireDialog` no longer abandons by itself; callers do it via `utils/abandon-active-questionnaire.ts`,
+  and the in-quiz dialog (consent already given) abandons right before creating.
 
 ## Next step
 

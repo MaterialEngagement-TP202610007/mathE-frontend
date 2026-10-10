@@ -23,6 +23,7 @@ import { GeneratingQuiz } from "../components/GeneratingQuiz"
 import { QuizRunner } from "../components/QuizRunner"
 import { AbandonDialog } from "../components/AbandonDialog"
 import { ActiveQuestionnaireDialog } from "../components/ActiveQuestionnaireDialog"
+import { abandonActiveQuestionnaire } from "../utils/abandon-active-questionnaire"
 import { ResultSummary } from "@/features/results/components/ResultSummary"
 import type {
   QuestionnaireResponse,
@@ -62,6 +63,8 @@ export function QuizPage() {
   const [loggingOut, setLoggingOut] = useState(false)
   // Guards against a duplicate POST when effects re-run (e.g. React StrictMode).
   const createStartedRef = useRef(false)
+  // Active questionnaire the student chose to replace before consenting; abandoned right before create.
+  const abandonBeforeCreateRef = useRef<number | null>(null)
 
   // ── Navigation blocker (only active while answering) ─────────
   const blocker = useBlocker(
@@ -92,6 +95,13 @@ export function QuizPage() {
 
   // ── Initial phase resolution (runs once on mount) ────────────
   useEffect(() => {
+    const replaceId = useQuizIntroStore.getState().replaceQuestionnaireId
+    if (accepted && replaceId !== null) {
+      // "Iniciar nuevo" on the dashboard, now confirmed by consent.
+      abandonBeforeCreateRef.current = replaceId
+      setPhase("generating")
+      return
+    }
     const existing = useQuizStore.getState().session
     if (existing?.status === "in_progress") {
       // Consent means the student asked for a new questionnaire: let them choose.
@@ -123,8 +133,15 @@ export function QuizPage() {
   useEffect(() => {
     if (phase !== "generating" || createStartedRef.current) return
     createStartedRef.current = true
-    questionnaireService
-      .create()
+    const replaceId = abandonBeforeCreateRef.current
+    const abandonFirst =
+      replaceId === null
+        ? Promise.resolve()
+        : abandonActiveQuestionnaire(replaceId).then(() => {
+            abandonBeforeCreateRef.current = null
+          })
+    abandonFirst
+      .then(() => questionnaireService.create())
       .then((data) => {
         startSession(data)
         setPhase("ready")
@@ -196,8 +213,11 @@ export function QuizPage() {
     setPhase("questions")
   }
 
-  // The dialog already abandoned the active questionnaire and cleared the local session.
-  const handleStartNew = () => {
+  // Consent was already given: abandon the active questionnaire right before creating the new one.
+  // A rejection keeps the dialog open (it toasts the error) and abandons nothing else.
+  const handleStartNew = async () => {
+    const activeId = pendingActive?.id ?? localQuestionnaireId
+    if (activeId !== null) await abandonActiveQuestionnaire(activeId)
     setPendingActive(null)
     createStartedRef.current = false
     setPhase("generating")
@@ -296,7 +316,6 @@ export function QuizPage() {
 
       <ActiveQuestionnaireDialog
         open={phase === "choosing"}
-        questionnaireId={pendingActive?.id ?? localQuestionnaireId}
         onContinue={handleContinueActive}
         onStartNew={handleStartNew}
         onDismiss={handleChoiceDismissed}
