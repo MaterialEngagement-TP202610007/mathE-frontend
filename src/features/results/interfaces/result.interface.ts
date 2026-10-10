@@ -24,4 +24,11 @@ export interface QuizResult {
   feedbackSource: FeedbackSource | null
   createdAt: string
   updatedAt: string
+  /**
+   * Teacher-validated label (HU-44, pilot phase). Optional: the deployed backend
+   * stores it but does not return it yet, so `undefined` means "unknown".
+   */
+  correctedVakLabel?: VakStyleApi | null
+  /** When the label was corrected. Optional until the backend returns it. */
+  correctedAt?: string | null
 }

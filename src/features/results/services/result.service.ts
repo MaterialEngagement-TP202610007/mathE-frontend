@@ -46,6 +46,15 @@ export const resultService = {
     return data
   },
 
+  /** HU-44: teacher-validated VAK label for the result and its ML dataset row. */
+  correctLabel: async (id: number, vakLabel: VakStyleApi): Promise<QuizResult> => {
+    const { data } = await api.patch<QuizResult>(
+      `${ENDPOINT_SERVER.RESULTS}/${id}/${ENDPOINT_SERVER.RESULTS_CORRECT_LABEL}`,
+      { vakLabel },
+    )
+    return data
+  },
+
   getSchoolStats: async (schoolId: number): Promise<SchoolStats> => {
     const { data } = await api.get<SchoolStats>(
       `${ENDPOINT_SERVER.RESULTS_STATS_SCHOOL}/${schoolId}`,

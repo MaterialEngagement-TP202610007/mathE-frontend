@@ -42,6 +42,8 @@ export enum ENDPOINT_SERVER {
   RESULTS_STATS_USER = "/results/stats/user",
   RESULTS_EVOLUTION = "/results/evolution",
   RESULTS_STUDENT = "/results/student",
+  /** Suffix for `PATCH /results/:id/correct-label` (Teacher/Admin). */
+  RESULTS_CORRECT_LABEL = "correct-label",
   NOTIFICATIONS = "/notifications",
   NOTIFICATIONS_UNREAD_COUNT = "/notifications/unread-count",
   NOTIFICATIONS_READ_ALL = "/notifications/read-all",

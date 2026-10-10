@@ -30,6 +30,7 @@ import { useAuthStore } from "@/features/auth/store/auth.store"
 import { markResultNotificationRead } from "@/features/notifications/utils/mark-result-notification-read"
 import { ROLE } from "@/config/constant.config"
 import { resultService } from "../services/result.service"
+import { LabelCorrectionPanel, type LabelCorrection } from "../components/LabelCorrectionPanel"
 import { lookupVak, toDisplayStyle, vakColors } from "../utils/vak"
 import {
   PROVISIONAL_RESULT_MESSAGE,
@@ -157,6 +158,13 @@ export function ResultDetailPage() {
     if (roleId !== ROLE.STUDENT || loadedResultId === undefined) return
     markResultNotificationRead(loadedResultId).catch(() => {})
   }, [roleId, loadedResultId])
+
+  // HU-44: only teachers correct labels. The backend also allows admins, but
+  // admins cannot open this route; students never see the panel.
+  const canCorrectLabel = roleId === ROLE.TEACHER
+  const handleLabelCorrected = (correction: LabelCorrection) => {
+    setResult((prev) => (prev ? { ...prev, ...correction } : prev))
+  }
 
   const handleExport = async () => {
     if (!reportRef.current || !result) return
@@ -574,6 +582,15 @@ export function ResultDetailPage() {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* ── Label correction (teachers only, not captured in PDF) ── */}
+      {canCorrectLabel ? (
+        <LabelCorrectionPanel
+          key={result.id}
+          result={result}
+          onCorrected={handleLabelCorrected}
+        />
+      ) : null}
     </div>
   )
 }

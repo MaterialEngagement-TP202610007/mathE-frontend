@@ -447,7 +447,7 @@ Returns `Paginated<Result>`. Invalid date strings return `400 { "error": "Invali
 | `schoolId` | integer | Filter by school |
 | `classifierType` | string | Filter by classifier, e.g. `xgboost` |
 
-`correct-label` body: `{ "vakLabel": "Visual" | "Auditory" | "Kinesthetic" }`. Sets `correctedVakLabel` on the result and marks the matching ML dataset row `labelSource=teacher_validated`.
+`correct-label` body: `{ "vakLabel": "Visual" | "Auditory" | "Kinesthetic" }`. Sets `correctedVakLabel` on the result and marks the matching ML dataset row `labelSource=teacher_validated`. Errors: `400 { "error": "Missing vakLabel" | "vakLabel must be one of: ..." | "Invalid result id" }`, `404 Result not found`. Returns the result entity, which on the deployed backend does **not** include `correctedVakLabel` (nor does `GET /:id`), so the frontend treats `correctedVakLabel` / `correctedAt` as optional (`undefined` = unknown).
 
 ### Notifications — `/api/notifications` (all 🔑, Student only)
 | Method | Path | Returns |
@@ -543,6 +543,15 @@ Only **approved** questions are eligible to appear in student questionnaires (wi
    → updates the ML dataset row to teacher_validated for future retraining.
 4. Inspect training data: GET /api/ml-dataset?labelSource=teacher_validated
 ```
+
+Frontend (HU-44): `ResultDetailPage` renders `LabelCorrectionPanel` for teachers only (admins cannot open
+the route; students never see it). It shows the predicted label, the corrected label when the response
+carries `correctedVakLabel`, and "Corregido el {fecha}" only when `correctedAt` is present. "Guardar
+corrección" is disabled while saving and when the selection equals the current effective label
+(`correctedVakLabel ?? predominantStyle`), and opens a confirmation dialog before calling
+`resultService.correctLabel`. On success the page keeps the submitted label in place (the deployed
+response does not echo it) and shows a toast; on error the backend message is shown inline and the
+panel stays usable. A reload shows no previous correction until the backend returns `correctedVakLabel`.
 
 ---
 
