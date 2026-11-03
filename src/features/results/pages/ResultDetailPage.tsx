@@ -39,7 +39,7 @@ import {
   feedbackSourceLabel,
   isAiFeedback,
   isProvisionalResult,
-  resolveSecondaryStyle,
+  resolveSecondaryStyles,
 } from "../utils/result-display"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
 
@@ -253,7 +253,7 @@ export function ResultDetailPage() {
   // ── Derived values ────────────────────────────────────────────────────────
 
   const displayStyle = toDisplayStyle(result.predominantStyle)
-  const secondaryStyle = result.isMixedProfile ? resolveSecondaryStyle(result) : null
+  const secondaryStyles = result.isMixedProfile ? resolveSecondaryStyles(result) : []
   const sourceLabel = feedbackSourceLabel(result.feedbackSource)
   const IconComponent = lookupVak(STYLE_ICON, result.predominantStyle, CircleHelp)
   const iconBg = lookupVak(STYLE_ICON_BG, result.predominantStyle, "bg-mathe-surface text-mathe-muted")
@@ -491,7 +491,7 @@ export function ResultDetailPage() {
           </motion.div>
 
           {/* ── Mixed profile card ── */}
-          {secondaryStyle ? (
+          {secondaryStyles.length > 0 ? (
             <motion.div
               variants={cardVariant}
               className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm"
@@ -501,20 +501,26 @@ export function ResultDetailPage() {
               </p>
               <p className="mt-2 text-sm leading-relaxed text-mathe-muted">
                 Tu perfil predominante es{" "}
-                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con un
-                estilo secundario relevante:{" "}
+                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con{" "}
+                {secondaryStyles.length > 1
+                  ? "estilos secundarios relevantes: "
+                  : "un estilo secundario relevante: "}
                 <span className="font-semibold text-mathe-ink">
-                  {toDisplayStyle(secondaryStyle)}
+                  {secondaryStyles.map(toDisplayStyle).join(" y ")}
                 </span>
                 .
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <VakBadge style={displayStyle} />
-                <VakBadge style={toDisplayStyle(secondaryStyle)} />
+                {secondaryStyles.map((style) => (
+                  <VakBadge key={style} style={toDisplayStyle(style)} />
+                ))}
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-mathe-muted">
-                {STYLE_DESCRIPTIONS[secondaryStyle]}
-              </p>
+              {secondaryStyles.map((style) => (
+                <p key={style} className="mt-4 text-sm leading-relaxed text-mathe-muted">
+                  {STYLE_DESCRIPTIONS[style]}
+                </p>
+              ))}
             </motion.div>
           ) : null}
 
@@ -544,6 +550,17 @@ export function ResultDetailPage() {
               </div>
               <p className="text-sm leading-relaxed text-mathe-ink">{result.aiFeedback}</p>
             </motion.div>
+          )}
+
+          {/* ── Automatic classification notice ── */}
+          {result.classifierType === "xgboost" && (
+            <motion.p
+              variants={cardVariant}
+              role="note"
+              className="rounded-2xl border border-mathe-border bg-mathe-white px-6 py-4 text-sm text-mathe-muted shadow-sm"
+            >
+              Esta clasificación fue generada automáticamente por el modelo de aprendizaje automático.
+            </motion.p>
           )}
 
           {/* ── Metadata card ── */}

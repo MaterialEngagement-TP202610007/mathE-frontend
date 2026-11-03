@@ -117,6 +117,12 @@ const router = createBrowserRouter([
   },
 ])
 
+const PUBLIC_PATHS: ReadonlySet<string> = new Set([
+  ROUTING.LOGIN,
+  ROUTING.REGISTER,
+  ROUTING.REGISTER_PENDING,
+])
+
 /** Total time spent retrying `/auth/me` while the backend wakes up (cold start ≈ 50 s). */
 const BOOT_RETRY_BUDGET_MS = 60_000
 const BOOT_RETRY_MAX_DELAY_MS = 8_000
@@ -167,7 +173,10 @@ export function AppRouter() {
   useEffect(() => {
     authService.onUnauthorized(() => {
       useAuthStore.getState().expireSession()
-      void router.navigate(ROUTING.LOGIN)
+      // The boot `/auth/me` answers 401 to every anonymous visitor: public pages stay where they are.
+      if (!PUBLIC_PATHS.has(router.state.location.pathname)) {
+        void router.navigate(ROUTING.LOGIN)
+      }
     })
 
     let cancelled = false

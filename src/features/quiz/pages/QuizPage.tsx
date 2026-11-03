@@ -21,6 +21,7 @@ import { useQuizStore } from "../store/quiz.store"
 import { questionnaireService } from "../services/questionnaire.service"
 import { GeneratingQuiz } from "../components/GeneratingQuiz"
 import { QuizRunner } from "../components/QuizRunner"
+import { SubmissionConfirmation } from "../components/SubmissionConfirmation"
 import { AbandonDialog } from "../components/AbandonDialog"
 import { ActiveQuestionnaireDialog } from "../components/ActiveQuestionnaireDialog"
 import { abandonActiveQuestionnaire } from "../utils/abandon-active-questionnaire"
@@ -38,9 +39,18 @@ import type {
  *  error      → generation failed: stay on screen with "Reintentar"
  *  ready      → POST succeeded, waiting for user to click "Continuar"
  *  questions  → active quiz
- *  result     → quiz submitted, showing result summary inline
+ *  submitted  → quiz received: confirmation with the option to view the result
+ *  result     → showing result summary inline
  */
-type Phase = "checking" | "choosing" | "generating" | "error" | "ready" | "questions" | "result"
+type Phase =
+  | "checking"
+  | "choosing"
+  | "generating"
+  | "error"
+  | "ready"
+  | "questions"
+  | "submitted"
+  | "result"
 
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
@@ -249,7 +259,7 @@ export function QuizPage() {
     clearSession()
     resetQuizIntro()
     setQuizResult(result)
-    setPhase("result")
+    setPhase("submitted")
   }
 
   // The questionnaire was abandoned server-side (e.g. from another tab): the local session is stale.
@@ -302,6 +312,8 @@ export function QuizPage() {
       >
         {isResult && quizResult ? (
           <ResultSummary result={quizResult} />
+        ) : phase === "submitted" ? (
+          <SubmissionConfirmation onViewResult={() => setPhase("result")} />
         ) : phase === "choosing" ? null : phase === "questions" ? (
           <QuizRunner onComplete={handleComplete} onAbandoned={handleAbandonedRemotely} />
         ) : (

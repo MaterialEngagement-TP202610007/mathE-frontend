@@ -249,12 +249,12 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
               variants={{
                 enter: (d: number) => ({ x: d * 56, opacity: 0, scale: 0.98 }),
                 center: { x: 0, opacity: 1, scale: 1 },
-                exit: (d: number) => ({ x: d * -56, opacity: 0, scale: 0.98 }),
+                exit: (d: number) => ({ x: d * -56, opacity: 0, scale: 0.98, transition: { duration: 0.1 } }),
               }}
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ type: "spring", stiffness: 300, damping: 32 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
             >
               <QuestionCard
                 question={currentQuestion}
@@ -268,10 +268,8 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
             <button
               type="button"
               onClick={() => goTo(currentIndex - 1)}
-              className={cn(
-                "inline-flex h-11 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface",
-                currentIndex === 0 && "invisible pointer-events-none",
-              )}
+              disabled={currentIndex === 0}
+              className="inline-flex h-11 items-center gap-2 rounded-pill border border-mathe-border bg-mathe-white px-5 text-sm font-semibold text-mathe-ink transition-colors hover:bg-mathe-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-mathe-white"
             >
               <ArrowLeft className="size-4" />
               Anterior
@@ -305,7 +303,7 @@ export function QuizRunner({ onComplete, onAbandoned }: QuizRunnerProps) {
                 className="inline-flex h-11 items-center gap-2 rounded-pill bg-mathe-blue px-5 text-sm font-semibold text-mathe-white transition-colors hover:bg-mathe-blue-deep"
               >
                 <CheckCircle2 className="size-4" />
-                Revisar
+                Revisar y enviar
               </button>
             ) : (
               <button

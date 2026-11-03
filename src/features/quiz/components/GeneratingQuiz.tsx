@@ -16,7 +16,7 @@ export function GeneratingQuiz({ ready, error, onContinue, onRetry }: Generating
     return (
       <div
         role="alert"
-        className="flex w-full max-w-md flex-col items-center text-center animate-fade-in animate-duration-slow"
+        className="flex w-full max-w-md flex-col items-center text-center animate-fade-in [animation-duration:300ms]"
       >
         <span className="grid size-16 place-items-center rounded-2xl bg-amber-50 text-amber-600">
           <TriangleAlert className="size-7" />
@@ -46,7 +46,7 @@ export function GeneratingQuiz({ ready, error, onContinue, onRetry }: Generating
   }
 
   return (
-    <div className="flex w-full max-w-md flex-col items-center text-center animate-fade-in animate-duration-slow">
+    <div className="flex w-full max-w-md flex-col items-center text-center animate-fade-in [animation-duration:300ms]">
       <div className="relative grid size-32 place-items-center">
         <span
           className={cn(

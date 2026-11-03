@@ -12,7 +12,7 @@ import {
   feedbackSourceLabel,
   isAiFeedback,
   isProvisionalResult,
-  resolveSecondaryStyle,
+  resolveSecondaryStyles,
 } from "../utils/result-display";
 import type { QuizCompletionResult } from "@/features/quiz/interfaces/questionnaire.interface";
 import { ROUTING } from "@/config/constant.config";
@@ -87,7 +87,7 @@ export function ResultSummary({ result }: ResultSummaryProps) {
   const iconClass = STYLE_ICON_CLASS[result.predominantStyle] ?? "bg-mathe-surface text-mathe-muted";
   const svgIcon = STYLE_SVG[result.predominantStyle] ?? null;
   const sourceLabel = feedbackSourceLabel(result.feedbackSource);
-  const secondaryStyle = result.isMixedProfile ? resolveSecondaryStyle(result) : null;
+  const secondaryStyles = result.isMixedProfile ? resolveSecondaryStyles(result) : [];
 
   return (
     <>
@@ -183,17 +183,17 @@ export function ResultSummary({ result }: ResultSummaryProps) {
             <p className="mt-2 text-sm text-mathe-muted">
               Tu perfil presenta componentes secundarios relevantes.
             </p>
-            {secondaryStyle ? (
-              <div className="mt-4">
+            {secondaryStyles.map((style) => (
+              <div key={style} className="mt-4">
                 <p className="text-sm text-mathe-ink">
                   Estilo secundario:{" "}
-                  <span className="font-semibold">{toDisplayStyle(secondaryStyle)}</span>
+                  <span className="font-semibold">{toDisplayStyle(style)}</span>
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-mathe-muted">
-                  {STYLE_DESCRIPTIONS[secondaryStyle]}
+                  {STYLE_DESCRIPTIONS[style]}
                 </p>
               </div>
-            ) : null}
+            ))}
           </motion.div>
         )}
 

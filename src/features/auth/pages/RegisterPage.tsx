@@ -243,7 +243,7 @@ export function RegisterPage() {
 
         <Button
           type="submit"
-          disabled={isLoading || !form.acceptTerms}
+          disabled={isLoading}
           className="h-11 rounded-pill bg-mathe-blue text-base font-semibold hover:bg-mathe-blue-deep"
         >
           {isLoading ? (

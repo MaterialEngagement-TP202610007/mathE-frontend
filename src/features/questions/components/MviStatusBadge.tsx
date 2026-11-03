@@ -85,16 +85,13 @@ interface MviRowMarkersProps {
 }
 
 /**
- * MVI markers for list rows (HU-58/60). The status badge renders only when the question
- * carries an `mviStatus`, so older questions validated before the engine existed stay clean
- * instead of showing "Sin validar" on every row. Renders nothing when there is nothing to show.
+ * MVI markers for list rows. A question without `mviStatus` (created before the engine
+ * existed) shows "Sin validar", the same state its review and detail screens show.
  */
 export function MviRowMarkers({ mviStatus, approvedOverMvi, className }: MviRowMarkersProps) {
-  const hasStatus = mviStatus !== null && mviStatus !== undefined
-  if (!hasStatus && !approvedOverMvi) return null
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
-      {hasStatus && <MviStatusBadge status={mviStatus} size="sm" />}
+      <MviStatusBadge status={mviStatus} size="sm" />
       {approvedOverMvi && <ApprovedOverMviMarker />}
     </span>
   )

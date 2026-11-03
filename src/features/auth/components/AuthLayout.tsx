@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { GraduationCap } from "lucide-react";
+import { motion } from "motion/react";
 import { MatheLogo } from "@/shared/components/icons/MatheLogo";
 
 interface AuthLayoutProps {
@@ -41,7 +42,12 @@ export function AuthLayout({
       </aside>
 
       <main className="flex flex-col items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md">
+        <motion.div
+          className="w-full max-w-md"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+        >
           <div className="mb-8 flex items-center gap-2 text-mathe-blue laptop:hidden">
             <GraduationCap className="size-6" />
             <span className="text-lg font-semibold">Math.E</span>
@@ -59,7 +65,7 @@ export function AuthLayout({
               {footer}
             </div>
           )}
-        </div>
+        </motion.div>
       </main>
     </div>
   );

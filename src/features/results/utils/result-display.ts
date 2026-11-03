@@ -75,3 +75,29 @@ export function resolveSecondaryStyle(source: SecondaryStyleSource): VakStyleApi
   const [style, probability] = p1 > p2 ? [first, p1] : [second, p2]
   return probability > 0 ? style : null
 }
+
+/** Two shares closer than this are reported together as tied secondary styles. */
+const SECONDARY_TIE_TOLERANCE = 0.005
+
+/**
+ * Secondary styles of a mixed result, strongest first. Lists both non-predominant
+ * styles when they tie (e.g. a 40/30/30 split) instead of picking one arbitrarily.
+ */
+export function resolveSecondaryStyles(source: SecondaryStyleSource): VakStyleApi[] {
+  const { predominantStyle } = source
+  if (!isVakStyleApi(predominantStyle)) return []
+
+  const others = ALL_STYLES.filter((s) => s !== predominantStyle)
+    .map((style) => ({ style, probability: probabilityOf(source, style) }))
+    .filter(({ probability }) => Number.isFinite(probability) && probability > 0)
+    .sort((a, b) => b.probability - a.probability)
+  if (others.length === 0) return []
+
+  const tied = others.filter(
+    ({ probability }) => others[0].probability - probability <= SECONDARY_TIE_TOLERANCE,
+  )
+  if (tied.length > 1) return tied.map(({ style }) => style)
+
+  const single = resolveSecondaryStyle(source)
+  return single ? [single] : []
+}

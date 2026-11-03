@@ -72,7 +72,7 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
               type="button"
               onClick={() => onSelect(option.id)}
               className={cn(
-                "flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all duration-200",
+                "flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all duration-100",
                 selected
                   ? "border-mathe-blue bg-mathe-blue/5 shadow-sm"
                   : "border-mathe-border bg-mathe-white hover:border-mathe-blue/40 hover:bg-mathe-surface",
@@ -80,7 +80,7 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
             >
               <span
                 className={cn(
-                  "grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors duration-200",
+                  "grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors duration-100",
                   selected
                     ? "bg-mathe-blue text-mathe-white"
                     : "bg-mathe-surface text-mathe-muted",
