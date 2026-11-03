@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/http"
 import { ROUTING } from "@/config/constant.config"
 import { GenerateQuestionsModal } from "../components/GenerateQuestionsModal"
+import { ContentTypeBadge } from "../components/ContentTypeBadge"
+import { MviRowMarkers } from "../components/MviStatusBadge"
 import { SchoolRequiredNotice } from "../components/SchoolRequiredNotice"
 import { SCHOOL_REQUIRED_TO_GENERATE_MESSAGE } from "../utils/school-scope"
 import { useQuestionGenerationStore } from "../store/question-generation.store"
@@ -229,6 +231,13 @@ export function PendingQuestionsPage() {
   const fromIdx = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const toIdx = Math.min(page * PAGE_SIZE, filtered.length)
   const hasDateFilter = Boolean(dateFrom || dateTo)
+  // HU-46 S2: a style-only filter gets a style-specific message; combined filters keep the generic hint.
+  const emptyMessage =
+    vakFilter !== "all" && !hasDateFilter
+      ? `No hay preguntas de estilo ${toSpanishStyle(vakFilter)} pendientes de validación.`
+      : vakFilter !== "all" || hasDateFilter
+        ? "Prueba ajustando los filtros"
+        : "No hay preguntas pendientes de revisión"
 
   return (
     <motion.div
@@ -312,8 +321,8 @@ export function PendingQuestionsPage() {
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
+      {/* ── Table ── (scrolls inside the card on narrow screens, never the page) */}
+      <div className="overflow-x-auto rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
         {loading ? (
           <>
             <div className="border-b border-mathe-border bg-mathe-surface/60 px-6 py-3">
@@ -343,11 +352,7 @@ export function PendingQuestionsPage() {
             </span>
             <div>
               <p className="font-semibold text-mathe-ink">Sin resultados</p>
-              <p className="mt-1 text-sm text-mathe-muted">
-                {vakFilter !== "all" || hasDateFilter
-                  ? "Prueba ajustando los filtros"
-                  : "No hay preguntas pendientes de revisión"}
-              </p>
+              <p className="mt-1 text-sm text-mathe-muted">{emptyMessage}</p>
             </div>
           </div>
         ) : (
@@ -362,6 +367,9 @@ export function PendingQuestionsPage() {
                 </th>
                 <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
                   Vista previa
+                </th>
+                <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
+                  Estilo
                 </th>
                 <th className="px-3 py-3 text-[11px] font-semibold uppercase tracking-widest text-mathe-muted">
                   Generada
@@ -388,10 +396,18 @@ export function PendingQuestionsPage() {
                     </code>
                   </td>
                   <td className="px-3 py-4">
-                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
+                    <ContentTypeBadge contentType={q.contentType} />
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xl truncate text-sm text-mathe-ink">{q.statement}</p>
+                    <MviRowMarkers
+                      mviStatus={q.mviStatus}
+                      approvedOverMvi={q.approvedOverMvi}
+                      className="mt-1.5"
+                    />
+                  </td>
+                  <td className="px-3 py-4">
+                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
                   </td>
                   <td className="px-3 py-4 text-sm text-mathe-muted">
                     {formatDate(q.createdAt)}

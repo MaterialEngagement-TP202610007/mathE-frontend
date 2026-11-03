@@ -15,6 +15,8 @@ import { DatePickerInput } from "@/components/ui/date-picker"
 import { questionService } from "../services/question.service"
 import type { Question, QuestionStatus, VakStyleApi } from "../interfaces/question.interface"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
+import { ContentTypeBadge } from "../components/ContentTypeBadge"
+import { MviRowMarkers } from "../components/MviStatusBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import { cn } from "@/lib/utils"
 import { ROUTING } from "@/config/constant.config"
@@ -29,6 +31,13 @@ const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: "approved", label: "Aprobadas" },
   { value: "rejected", label: "Rechazadas" },
 ]
+
+/** Status qualifier for the style-specific empty message ("aprobadas" / "rechazadas"). */
+const STATUS_QUALIFIER: Record<StatusFilter, string> = {
+  all: "",
+  approved: " aprobadas",
+  rejected: " rechazadas",
+}
 
 const VAK_TABS: { value: VakFilter; label: string }[] = [
   { value: "all", label: "Todas" },
@@ -190,6 +199,15 @@ export function ValidationHistoryPage() {
   const fromIdx = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const toIdx = Math.min(page * PAGE_SIZE, filtered.length)
   const hasDateFilter = Boolean(dateFrom || dateTo)
+  const hasSearch = Boolean(search.trim())
+  // HU-46 S2: a style filter (optionally with a status tab) gets a style-specific message;
+  // search or date filters keep the generic hint because the message would no longer be exact.
+  const emptyMessage =
+    vakFilter !== "all" && !hasDateFilter && !hasSearch
+      ? `No hay preguntas${STATUS_QUALIFIER[statusFilter]} de estilo ${toSpanishStyle(vakFilter)} en el historial.`
+      : statusFilter !== "all" || vakFilter !== "all" || hasDateFilter || search
+        ? "Prueba ajustando los filtros"
+        : "Aún no hay preguntas validadas en tu historial"
 
   return (
     <motion.div
@@ -328,8 +346,8 @@ export function ValidationHistoryPage() {
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
+      {/* ── Table ── (scrolls inside the card on narrow screens, never the page) */}
+      <div className="overflow-x-auto rounded-2xl border border-mathe-border bg-mathe-white shadow-sm">
         {loading ? (
           <>
             <div className="border-b border-mathe-border bg-mathe-surface/60 px-6 py-3">
@@ -361,11 +379,7 @@ export function ValidationHistoryPage() {
             </span>
             <div>
               <p className="font-semibold text-mathe-ink">Sin resultados</p>
-              <p className="mt-1 text-sm text-mathe-muted">
-                {statusFilter !== "all" || vakFilter !== "all" || hasDateFilter || search
-                  ? "Prueba ajustando los filtros"
-                  : "Aún no hay preguntas validadas en tu historial"}
-              </p>
+              <p className="mt-1 text-sm text-mathe-muted">{emptyMessage}</p>
             </div>
           </div>
         ) : (
@@ -422,10 +436,15 @@ export function ValidationHistoryPage() {
                     </span>
                   </td>
                   <td className="px-3 py-4">
-                    <VakBadge style={toSpanishStyle(q.vakStyle)} />
+                    <ContentTypeBadge contentType={q.contentType} />
                   </td>
                   <td className="px-3 py-4">
                     <p className="max-w-xs truncate text-sm text-mathe-ink">{q.statement}</p>
+                    <MviRowMarkers
+                      mviStatus={q.mviStatus}
+                      approvedOverMvi={q.approvedOverMvi}
+                      className="mt-1.5"
+                    />
                   </td>
                   <td className="px-3 py-4">
                     <VakBadge style={toSpanishStyle(q.vakStyle)} />

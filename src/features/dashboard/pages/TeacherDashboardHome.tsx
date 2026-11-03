@@ -15,7 +15,6 @@ import { useGenerationPolling } from "@/features/questions/hooks/use-generation-
 import { useNotificationStore } from "@/features/notifications/store/notification.store"
 import { getErrorMessage } from "@/lib/http"
 import type { Question, VakStyleApi } from "@/features/questions/interfaces/question.interface"
-import { isThisMonth } from "../utils"
 import { cn } from "@/lib/utils"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -29,10 +28,8 @@ const VAK_LABEL: Record<string, string> = {
 /** Batches rapid per-question SSE events into a single reload. */
 const SSE_REFETCH_DEBOUNCE_MS = 1_000
 
-function currentMonthLabel() {
-  const s = new Date().toLocaleDateString("es-PE", { month: "long", year: "numeric" })
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
+/** Placeholder shown when a count could not be loaded. */
+const UNAVAILABLE = "—"
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
@@ -101,9 +98,10 @@ export function TeacherDashboardHome() {
   const navigate = useNavigate()
 
   const [pendingQuestions, setPendingQuestions] = useState<Question[]>([])
-  const [pendingTotal, setPendingTotal] = useState(0)
-  const [approvedThisMonth, setApprovedThisMonth] = useState(0)
-  const [rejectedThisMonth, setRejectedThisMonth] = useState(0)
+  // Full-period totals from the paginated responses; `null` when that request failed.
+  const [pendingTotal, setPendingTotal] = useState<number | null>(null)
+  const [approvedTotal, setApprovedTotal] = useState<number | null>(null)
+  const [rejectedTotal, setRejectedTotal] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [showModal, setShowModal] = useState(false)
@@ -118,18 +116,22 @@ export function TeacherDashboardHome() {
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const loadSummary = useCallback(() => {
-    return Promise.all([
+    // Each count settles independently: one failed request shows "—" without hiding the others.
+    // Approved/rejected only need `total`, so a single item is requested.
+    return Promise.allSettled([
       questionService.listMy({ status: "pending", page: 1, limit: 5 }),
-      questionService.listMy({ status: "approved", page: 1, limit: 50 }),
-      questionService.listMy({ status: "rejected", page: 1, limit: 50 }),
-    ])
-      .then(([p, a, r]) => {
-        setPendingQuestions(p.items)
-        setPendingTotal(p.total)
-        setApprovedThisMonth(a.items.filter((q) => isThisMonth(q.updatedAt)).length)
-        setRejectedThisMonth(r.items.filter((q) => isThisMonth(q.updatedAt)).length)
-      })
-      .catch(() => {})
+      questionService.listMy({ status: "approved", page: 1, limit: 1 }),
+      questionService.listMy({ status: "rejected", page: 1, limit: 1 }),
+    ]).then(([p, a, r]) => {
+      if (p.status === "fulfilled") {
+        setPendingQuestions(p.value.items)
+        setPendingTotal(p.value.total)
+      } else {
+        setPendingTotal(null)
+      }
+      setApprovedTotal(a.status === "fulfilled" ? a.value.total : null)
+      setRejectedTotal(r.status === "fulfilled" ? r.value.total : null)
+    })
   }, [])
 
   useEffect(() => {
@@ -176,7 +178,6 @@ export function TeacherDashboardHome() {
   const firstName = user?.name?.split(" ")[0] ?? "Profesor"
   // Questions are generated for the teacher's school — the backend rejects teachers without one.
   const canGenerate = Boolean(user?.school?.id)
-  const monthLabel = currentMonthLabel()
 
   return (
     <motion.div className="grid gap-8" initial="hidden" animate="show" variants={stagger}>
@@ -201,26 +202,26 @@ export function TeacherDashboardHome() {
       <motion.div variants={fadeUp} className="grid gap-4 tablet:grid-cols-3">
         <StatCard
           label="Preguntas pendientes"
-          value={pendingTotal}
-          hint="Requieren revisión"
+          value={pendingTotal ?? UNAVAILABLE}
+          hint={pendingTotal === null ? "No se pudo cargar" : "Requieren revisión"}
           valueColor="text-amber-500"
           iconBg="bg-amber-50 text-amber-500"
           icon={<Clock className="size-4" />}
           loading={loading}
         />
         <StatCard
-          label="Aprobadas este mes"
-          value={approvedThisMonth}
-          hint={monthLabel}
+          label="Preguntas aprobadas"
+          value={approvedTotal ?? UNAVAILABLE}
+          hint={approvedTotal === null ? "No se pudo cargar" : "En total"}
           valueColor="text-emerald-600"
           iconBg="bg-emerald-50 text-emerald-600"
           icon={<CheckCircle2 className="size-4" />}
           loading={loading}
         />
         <StatCard
-          label="Rechazadas este mes"
-          value={rejectedThisMonth}
-          hint={monthLabel}
+          label="Preguntas rechazadas"
+          value={rejectedTotal ?? UNAVAILABLE}
+          hint={rejectedTotal === null ? "No se pudo cargar" : "En total"}
           valueColor="text-red-500"
           iconBg="bg-red-50 text-red-500"
           icon={<XCircle className="size-4" />}
@@ -232,7 +233,7 @@ export function TeacherDashboardHome() {
       <motion.section variants={fadeUp} className="grid gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-mathe-ink">Preguntas pendientes recientes</h2>
-          {pendingTotal > 0 && (
+          {(pendingTotal ?? 0) > 0 && (
             <button
               type="button"
               onClick={() => navigate(ROUTING.DASHBOARD_QUESTIONS)}

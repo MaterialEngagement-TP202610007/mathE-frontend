@@ -95,6 +95,7 @@ export function RegisterPage() {
       schoolId: form.schoolId!,
       ...(isStudent ? { academicGradeId: form.academicGradeId! } : {}),
       ...(form.phoneNumber ? { phoneNumber: form.phoneNumber } : {}),
+      ...(form.acceptTerms ? { acceptTerms: true as const } : {}),
     };
 
     void register(payload);

@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
 import { toSpanishStyle, formatQuestionId, formatDate } from "@/features/dashboard/utils"
 import type { Question, QuestionStatus } from "../interfaces/question.interface"
+import { ContentTypeBadge } from "./ContentTypeBadge"
+import { MviRowMarkers } from "./MviStatusBadge"
 
 // ── Status badge (for validation history) ─────────────────────────────────────
 
@@ -77,7 +79,12 @@ export function QuestionRow({
       {/* Statement */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-mathe-ink max-w-[calc(100%-100px)]">{question.statement}</p>
-        <p className="mt-0.5 text-xs text-mathe-muted">{formatDate(question.createdAt)}</p>
+        {/* Meta line: wraps on narrow screens instead of overflowing the row */}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-xs text-mathe-muted">{formatDate(question.createdAt)}</span>
+          <ContentTypeBadge contentType={question.contentType} className="px-2 py-0.5 text-[11px]" />
+          <MviRowMarkers mviStatus={question.mviStatus} approvedOverMvi={question.approvedOverMvi} />
+        </div>
       </div>
 
       {/* Action button */}
