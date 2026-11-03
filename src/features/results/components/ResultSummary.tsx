@@ -1,10 +1,19 @@
-import { ArrowRight, Bot, LayoutDashboard } from "lucide-react";
+import { ArrowRight, Bot, Info, LayoutDashboard, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { VakBadge } from "@/features/dashboard/components/VakBadge";
 import { ConfettiCelebration } from "./ConfettiCelebration";
 import { StyleDistribution } from "./StyleDistribution";
 import { toDisplayStyle } from "../utils/vak";
+import {
+  PROVISIONAL_RESULT_MESSAGE,
+  PROVISIONAL_RESULT_TITLE,
+  STYLE_DESCRIPTIONS,
+  feedbackSourceLabel,
+  isAiFeedback,
+  isProvisionalResult,
+  resolveSecondaryStyle,
+} from "../utils/result-display";
 import type { QuizCompletionResult } from "@/features/quiz/interfaces/questionnaire.interface";
 import { ROUTING } from "@/config/constant.config";
 
@@ -77,6 +86,8 @@ export function ResultSummary({ result }: ResultSummaryProps) {
   const displayStyle = toDisplayStyle(result.predominantStyle);
   const iconClass = STYLE_ICON_CLASS[result.predominantStyle] ?? "bg-mathe-surface text-mathe-muted";
   const svgIcon = STYLE_SVG[result.predominantStyle] ?? null;
+  const sourceLabel = feedbackSourceLabel(result.feedbackSource);
+  const secondaryStyle = result.isMixedProfile ? resolveSecondaryStyle(result) : null;
 
   return (
     <>
@@ -109,6 +120,25 @@ export function ResultSummary({ result }: ResultSummaryProps) {
           <VakBadge style={displayStyle} className="mt-1 px-3 py-1.5 text-sm" />
         </motion.div>
 
+        {/* Provisional notice (simple_score fallback) */}
+        {isProvisionalResult(result.classifierType) ? (
+          <motion.div
+            variants={card}
+            role="note"
+            className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+          >
+            <Info className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                {PROVISIONAL_RESULT_TITLE}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                {PROVISIONAL_RESULT_MESSAGE}
+              </p>
+            </div>
+          </motion.div>
+        ) : null}
+
         {/* Distribution */}
         <motion.div variants={card}>
           <StyleDistribution result={result} />
@@ -122,12 +152,18 @@ export function ResultSummary({ result }: ResultSummaryProps) {
           >
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-widest text-mathe-muted">
-                Descripción generada por inteligencia artificial
+                Retroalimentación personalizada
               </p>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-mathe-muted">
-                <Bot className="size-3.5" />
-                Generado por IA
-              </span>
+              {sourceLabel ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-mathe-muted">
+                  {isAiFeedback(result.feedbackSource) ? (
+                    <Sparkles className="size-3.5" />
+                  ) : (
+                    <Bot className="size-3.5" />
+                  )}
+                  {sourceLabel}
+                </span>
+              ) : null}
             </div>
             <p className="text-sm leading-relaxed text-mathe-ink">
               {result.aiFeedback}
@@ -147,6 +183,17 @@ export function ResultSummary({ result }: ResultSummaryProps) {
             <p className="mt-2 text-sm text-mathe-muted">
               Tu perfil presenta componentes secundarios relevantes.
             </p>
+            {secondaryStyle ? (
+              <div className="mt-4">
+                <p className="text-sm text-mathe-ink">
+                  Estilo secundario:{" "}
+                  <span className="font-semibold">{toDisplayStyle(secondaryStyle)}</span>
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-mathe-muted">
+                  {STYLE_DESCRIPTIONS[secondaryStyle]}
+                </p>
+              </div>
+            ) : null}
           </motion.div>
         )}
 

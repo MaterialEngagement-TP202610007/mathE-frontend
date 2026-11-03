@@ -16,6 +16,11 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
   const [imgError, setImgError] = useState(false)
 
   const hasMedia = Boolean(question.mediaUrl)
+  // Fallback bank questions may carry a media content type without a mediaUrl.
+  // Only an explicit media type triggers the placeholder: plain text questions (or a
+  // missing/unknown contentType) legitimately have no media and render nothing.
+  const expectsMedia = question.contentType === "image" || question.contentType === "audio"
+  const showMediaBox = hasMedia || expectsMedia
   const showImage = hasMedia && !imgError
 
   return (
@@ -24,8 +29,8 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
         {question.statement}
       </p>
 
-      {/* Fixed-height media container — always rendered when question has mediaUrl */}
-      {hasMedia && (
+      {/* Fixed-height media container — rendered when the question has or expects media */}
+      {showMediaBox && (
         <div className="relative mt-4 h-64 overflow-hidden rounded-2xl bg-mathe-surface tablet:h-96 laptop:h-[525px]">
           {showImage ? (
             <>
@@ -48,7 +53,11 @@ export function QuestionCard({ question, selectedOptionId, onSelect }: QuestionC
               <span className="grid size-12 place-items-center rounded-2xl bg-mathe-border/30">
                 <Image className="size-6 text-mathe-muted/50" />
               </span>
-              <p className="text-sm text-mathe-muted">No se pudo cargar la imagen</p>
+              <p className="text-sm text-mathe-muted">
+                {question.contentType === "audio"
+                  ? "No se pudo cargar el contenido multimedia"
+                  : "No se pudo cargar la imagen"}
+              </p>
             </div>
           )}
         </div>

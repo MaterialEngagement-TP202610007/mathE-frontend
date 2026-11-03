@@ -9,7 +9,8 @@ import {
   Cpu,
   Download,
   Eye,
-  Headphones, 
+  Headphones,
+  Info,
   Loader2,
   Sparkles,
 } from "lucide-react"
@@ -23,9 +24,23 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { ErrorPanel } from "@/components/shared/ErrorPanel"
 import { VakBadge } from "@/features/dashboard/components/VakBadge"
+import { useAuthStore } from "@/features/auth/store/auth.store"
+import { markResultNotificationRead } from "@/features/notifications/utils/mark-result-notification-read"
+import { ROLE } from "@/config/constant.config"
 import { resultService } from "../services/result.service"
+import { LabelCorrectionPanel, type LabelCorrection } from "../components/LabelCorrectionPanel"
 import { lookupVak, toDisplayStyle, vakColors } from "../utils/vak"
+import {
+  PROVISIONAL_RESULT_MESSAGE,
+  PROVISIONAL_RESULT_TITLE,
+  STYLE_DESCRIPTIONS,
+  feedbackSourceLabel,
+  isAiFeedback,
+  isProvisionalResult,
+  resolveSecondaryStyle,
+} from "../utils/result-display"
 import type { QuizResult, VakStyleApi } from "../interfaces/result.interface"
 
 // ── Static lookup tables ──────────────────────────────────────────────────────
@@ -46,15 +61,6 @@ const STYLE_ICON: Record<VakStyleApi, React.ElementType> = {
   Visual: Eye,
   Auditory: Headphones,
   Kinesthetic: Activity,
-}
-
-const STYLE_DESCRIPTIONS: Record<VakStyleApi, string> = {
-  Visual:
-    "El estilo Visual implica procesar y retener información principalmente a través de imágenes, diagramas y esquemas. Las personas con este estilo recuerdan mejor lo que ven y tienden a pensar en imágenes. Prefieren la información presentada de forma gráfica, organizada espacialmente y con uso de colores. Son buenos para interpretar mapas, tablas y gráficas.",
-  Auditory:
-    "El estilo Auditivo implica procesar y retener información principalmente a través del sonido y el lenguaje. Las personas con este estilo recuerdan mejor lo que escuchan y aprenden mediante conversaciones, debates y explicaciones verbales. Responden bien a instrucciones orales y disfrutan de los debates en clase.",
-  Kinesthetic:
-    "El estilo Kinestésico implica procesar y retener información a través de la experiencia física y el movimiento. Las personas con este estilo aprenden mejor haciendo, tocando y experimentando directamente con los materiales. Prefieren las actividades prácticas y el aprendizaje en movimiento.",
 }
 
 const CLASSIFIER_LABELS: Record<string, string> = {
@@ -120,14 +126,45 @@ export function ResultDetailPage() {
   const [result, setResult] = useState<QuizResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  // HU-54: a failed load shows a retryable error panel instead of silently redirecting.
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(false)
     resultService
       .getById(Number(id))
-      .then(setResult)
-      .catch(() => navigate("/dashboard", { replace: true }))
-      .finally(() => setLoading(false))
-  }, [id, navigate])
+      .then((data) => {
+        if (!cancelled) setResult(data)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, reloadKey])
+
+  // HU-35: opening a result marks its `result_available` notification as read.
+  // Notifications are student-only; failures are silent and never affect the page.
+  const roleId = useAuthStore((s) => s.roleId)
+  const loadedResultId = result?.id
+  useEffect(() => {
+    if (roleId !== ROLE.STUDENT || loadedResultId === undefined) return
+    markResultNotificationRead(loadedResultId).catch(() => {})
+  }, [roleId, loadedResultId])
+
+  // HU-44: only teachers correct labels. The backend also allows admins, but
+  // admins cannot open this route; students never see the panel.
+  const canCorrectLabel = roleId === ROLE.TEACHER
+  const handleLabelCorrected = (correction: LabelCorrection) => {
+    setResult((prev) => (prev ? { ...prev, ...correction } : prev))
+  }
 
   const handleExport = async () => {
     if (!reportRef.current || !result) return
@@ -190,14 +227,34 @@ export function ResultDetailPage() {
     )
   }
 
-  if (!result) return null
+  if (loadError || !result) {
+    return (
+      <div className="grid gap-6 pb-10">
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-pill border border-mathe-border bg-mathe-white px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-surface hover:text-mathe-ink"
+          >
+            <ArrowLeft className="size-4" />
+            Volver
+          </button>
+        </div>
+        <ErrorPanel
+          title="No pudimos cargar este resultado"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => setReloadKey((k) => k + 1)}
+          supportSubject={`Math.E: error al cargar el resultado ${id ?? ""}`.trim()}
+        />
+      </div>
+    )
+  }
 
   // ── Derived values ────────────────────────────────────────────────────────
 
   const displayStyle = toDisplayStyle(result.predominantStyle)
-  const secondaryDisplay = result.secondaryStyle
-    ? toDisplayStyle(result.secondaryStyle)
-    : null
+  const secondaryStyle = result.isMixedProfile ? resolveSecondaryStyle(result) : null
+  const sourceLabel = feedbackSourceLabel(result.feedbackSource)
   const IconComponent = lookupVak(STYLE_ICON, result.predominantStyle, CircleHelp)
   const iconBg = lookupVak(STYLE_ICON_BG, result.predominantStyle, "bg-mathe-surface text-mathe-muted")
 
@@ -288,6 +345,23 @@ export function ResultDetailPage() {
               {lookupVak(STYLE_DESCRIPTIONS, result.predominantStyle, "")}
             </p>
           </motion.div>
+
+          {/* ── Provisional notice (simple_score fallback) ── */}
+          {isProvisionalResult(result.classifierType) ? (
+            <motion.div
+              variants={cardVariant}
+              role="note"
+              className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            >
+              <Info className="mt-0.5 size-4 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">{PROVISIONAL_RESULT_TITLE}</p>
+                <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                  {PROVISIONAL_RESULT_MESSAGE}
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
 
           {/* ── Distribution card ── */}
           <motion.div
@@ -417,7 +491,7 @@ export function ResultDetailPage() {
           </motion.div>
 
           {/* ── Mixed profile card ── */}
-          {result.isMixedProfile && result.secondaryStyle && secondaryDisplay && (
+          {secondaryStyle ? (
             <motion.div
               variants={cardVariant}
               className="rounded-2xl border border-mathe-border bg-mathe-white p-6 shadow-sm"
@@ -427,15 +501,22 @@ export function ResultDetailPage() {
               </p>
               <p className="mt-2 text-sm leading-relaxed text-mathe-muted">
                 Tu perfil predominante es{" "}
-                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con
-                componentes secundarios relevantes:
+                <span className="font-semibold text-mathe-ink">{displayStyle}</span> con un
+                estilo secundario relevante:{" "}
+                <span className="font-semibold text-mathe-ink">
+                  {toDisplayStyle(secondaryStyle)}
+                </span>
+                .
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <VakBadge style={displayStyle} />
-                <VakBadge style={secondaryDisplay} />
+                <VakBadge style={toDisplayStyle(secondaryStyle)} />
               </div>
+              <p className="mt-4 text-sm leading-relaxed text-mathe-muted">
+                {STYLE_DESCRIPTIONS[secondaryStyle]}
+              </p>
             </motion.div>
-          )}
+          ) : null}
 
           {/* ── AI feedback card ── */}
           {result.aiFeedback && (
@@ -447,18 +528,19 @@ export function ResultDetailPage() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-mathe-muted">
                   Retroalimentación personalizada
                 </p>
-                {result.feedbackSource === "gemini" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-600">
-                    <Sparkles className="size-3" />
-                    Gemini AI
-                  </span>
-                )}
-                {result.feedbackSource === "predefined" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
-                    <Bot className="size-3" />
-                    Respuesta estándar
-                  </span>
-                )}
+                {sourceLabel ? (
+                  isAiFeedback(result.feedbackSource) ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-600">
+                      <Sparkles className="size-3" />
+                      {sourceLabel}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-pill bg-mathe-surface px-2.5 py-1 text-xs font-semibold text-mathe-muted">
+                      <Bot className="size-3" />
+                      {sourceLabel}
+                    </span>
+                  )
+                ) : null}
               </div>
               <p className="text-sm leading-relaxed text-mathe-ink">{result.aiFeedback}</p>
             </motion.div>
@@ -500,6 +582,15 @@ export function ResultDetailPage() {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* ── Label correction (teachers only, not captured in PDF) ── */}
+      {canCorrectLabel ? (
+        <LabelCorrectionPanel
+          key={result.id}
+          result={result}
+          onCorrected={handleLabelCorrected}
+        />
+      ) : null}
     </div>
   )
 }

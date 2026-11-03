@@ -1,4 +1,4 @@
-import { CircleDashed, CloudOff, ShieldAlert, ShieldCheck } from "lucide-react"
+import { AlertTriangle, CircleDashed, CloudOff, ShieldAlert, ShieldCheck } from "lucide-react"
 import type { ComponentType } from "react"
 import { cn } from "@/lib/utils"
 import type { MviStatus } from "../interfaces/question.interface"
@@ -38,23 +38,64 @@ const STATUSES: Record<
 
 interface MviStatusBadgeProps {
   status: MviStatus | null | undefined
+  /** "sm" is a compact variant for list rows; the default rendering is unchanged. */
+  size?: "default" | "sm"
   className?: string
 }
 
 /** Pill badge for the MVI (validation engine) diagnosis of a question. */
-export function MviStatusBadge({ status, className }: MviStatusBadgeProps) {
+export function MviStatusBadge({ status, size = "default", className }: MviStatusBadgeProps) {
   const key: BadgeKey = status && status in STATUSES ? status : "none"
   const { label, icon: Icon, className: tone } = STATUSES[key]
+  const compact = size === "sm"
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center rounded-pill font-semibold",
+        compact ? "gap-1 px-2 py-0.5 text-[11px]" : "gap-1.5 px-2.5 py-1 text-xs",
         tone,
         className,
       )}
     >
-      <Icon className="size-3.5 shrink-0" />
+      <Icon className={cn("shrink-0", compact ? "size-3" : "size-3.5")} />
       {label}
+    </span>
+  )
+}
+
+/** Compact marker for a question a teacher approved while the MVI diagnosis had failed. */
+export function ApprovedOverMviMarker({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-pill bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200",
+        className,
+      )}
+    >
+      <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+      Aprobada sobre MVI
+    </span>
+  )
+}
+
+interface MviRowMarkersProps {
+  mviStatus: MviStatus | null | undefined
+  approvedOverMvi: boolean | undefined
+  className?: string
+}
+
+/**
+ * MVI markers for list rows (HU-58/60). The status badge renders only when the question
+ * carries an `mviStatus`, so older questions validated before the engine existed stay clean
+ * instead of showing "Sin validar" on every row. Renders nothing when there is nothing to show.
+ */
+export function MviRowMarkers({ mviStatus, approvedOverMvi, className }: MviRowMarkersProps) {
+  const hasStatus = mviStatus !== null && mviStatus !== undefined
+  if (!hasStatus && !approvedOverMvi) return null
+  return (
+    <span className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
+      {hasStatus && <MviStatusBadge status={mviStatus} size="sm" />}
+      {approvedOverMvi && <ApprovedOverMviMarker />}
     </span>
   )
 }

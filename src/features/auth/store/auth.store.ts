@@ -25,10 +25,21 @@ function resetUserScopedStores({ keepQuiz = false }: { keepQuiz?: boolean } = {}
   useQuestionGenerationStore.getState().reset()
 }
 
+/** Why the last sign-out happened, so the login screen can explain it. */
+export type LogoutReason = "idle"
+
+interface LogoutOptions {
+  /** Keep the persisted quiz so the same student can resume after logging back in. */
+  keepQuiz?: boolean
+  reason?: LogoutReason
+}
+
 interface AuthState {
   user: PublicUser | null
   roleId: number | null
   isAuthenticated: boolean
+  /** In-memory only (not persisted): read once by the login screen. */
+  logoutReason: LogoutReason | null
   setSession: (user: PublicUser) => void
   /** Explicit sign-out: wipes all per-user state, including an in-progress quiz. */
   clearSession: () => void
@@ -37,7 +48,7 @@ interface AuthState {
    * student can resume after logging back in.
    */
   expireSession: () => void
-  logout: () => Promise<void>
+  logout: (options?: LogoutOptions) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -46,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       roleId: null,
       isAuthenticated: false,
+      logoutReason: null,
 
       setSession: (user) => {
         // A persisted quiz from a different account must never leak into this one.
@@ -61,6 +73,7 @@ export const useAuthStore = create<AuthState>()(
           user,
           roleId: user.roleId ?? null,
           isAuthenticated: true,
+          logoutReason: null,
         })
       },
 
@@ -74,11 +87,13 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, roleId: null, isAuthenticated: false })
       },
 
-      logout: async () => {
+      logout: async ({ keepQuiz = false, reason }: LogoutOptions = {}) => {
         try {
           await authService.logout()
         } finally {
-          get().clearSession()
+          if (keepQuiz) get().expireSession()
+          else get().clearSession()
+          set({ logoutReason: reason ?? null })
         }
       },
     }),

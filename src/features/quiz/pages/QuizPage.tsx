@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, useBlocker } from "react-router"
-import { X } from "lucide-react"
+import { Loader2, LogOut, X } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { ROUTING } from "@/config/constant.config"
+import { useIdleLogout } from "@/features/auth/hooks/useIdleLogout"
+import { useAuthStore } from "@/features/auth/store/auth.store"
 import { HttpError, getErrorMessage } from "@/lib/http"
 import { MatheLogo } from "@/shared/components/icons/MatheLogo"
 import { useQuizIntroStore } from "../store/quiz-intro.store"
@@ -11,39 +22,65 @@ import { questionnaireService } from "../services/questionnaire.service"
 import { GeneratingQuiz } from "../components/GeneratingQuiz"
 import { QuizRunner } from "../components/QuizRunner"
 import { AbandonDialog } from "../components/AbandonDialog"
+import { ActiveQuestionnaireDialog } from "../components/ActiveQuestionnaireDialog"
+import { abandonActiveQuestionnaire } from "../utils/abandon-active-questionnaire"
 import { ResultSummary } from "@/features/results/components/ResultSummary"
-import type { QuizCompletionResult } from "../interfaces/questionnaire.interface"
+import type {
+  QuestionnaireResponse,
+  QuizCompletionResult,
+} from "../interfaces/questionnaire.interface"
 
 /**
  * Phase machine:
  *  checking   → resolve localStorage / accepted / GET active
+ *  choosing   → an active questionnaire exists: continue it or start a new one
  *  generating → POST /questionnaires in flight
+ *  error      → generation failed: stay on screen with "Reintentar"
  *  ready      → POST succeeded, waiting for user to click "Continuar"
  *  questions  → active quiz
  *  result     → quiz submitted, showing result summary inline
  */
-type Phase = "checking" | "generating" | "ready" | "questions" | "result"
+type Phase = "checking" | "choosing" | "generating" | "error" | "ready" | "questions" | "result"
 
 export function QuizPage() {
   const accepted = useQuizIntroStore((s) => s.accepted)
   const resetQuizIntro = useQuizIntroStore((s) => s.reset)
   const navigate = useNavigate()
   const { startSession, clearSession } = useQuizStore()
+  const logout = useAuthStore((s) => s.logout)
 
   const [phase, setPhase] = useState<Phase>("checking")
   const [manualAbandon, setManualAbandon] = useState(false)
   const [quizResult, setQuizResult] = useState<QuizCompletionResult | null>(null)
+  // Active questionnaire fetched after a 409; only loaded into the store if the student continues it.
+  const [generationError, setGenerationError] = useState<string | null>(null)
+  const [pendingActive, setPendingActive] = useState<QuestionnaireResponse | null>(null)
+  const localQuestionnaireId = useQuizStore((s) => s.session?.questionnaireId ?? null)
   const abandonedRef = useRef(false)
+  // Signing out must leave the page without the abandon prompt.
+  const loggingOutRef = useRef(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   // Guards against a duplicate POST when effects re-run (e.g. React StrictMode).
   const createStartedRef = useRef(false)
+  // Active questionnaire the student chose to replace before consenting; abandoned right before create.
+  const abandonBeforeCreateRef = useRef<number | null>(null)
 
   // ── Navigation blocker (only active while answering) ─────────
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       phase === "questions" &&
       !abandonedRef.current &&
+      !loggingOutRef.current &&
       currentLocation.pathname !== nextLocation.pathname,
   )
+
+  // ── Inactivity logout (the quiz lives outside DashboardLayout) ──
+  useIdleLogout({
+    onBeforeLogout: () => {
+      loggingOutRef.current = true
+    },
+  })
 
   // ── Browser / tab close guard ────────────────────────────────
   useEffect(() => {
@@ -58,9 +95,17 @@ export function QuizPage() {
 
   // ── Initial phase resolution (runs once on mount) ────────────
   useEffect(() => {
+    const replaceId = useQuizIntroStore.getState().replaceQuestionnaireId
+    if (accepted && replaceId !== null) {
+      // "Iniciar nuevo" on the dashboard, now confirmed by consent.
+      abandonBeforeCreateRef.current = replaceId
+      setPhase("generating")
+      return
+    }
     const existing = useQuizStore.getState().session
     if (existing?.status === "in_progress") {
-      setPhase("questions")
+      // Consent means the student asked for a new questionnaire: let them choose.
+      setPhase(accepted ? "choosing" : "questions")
       return
     }
     if (accepted) {
@@ -88,8 +133,15 @@ export function QuizPage() {
   useEffect(() => {
     if (phase !== "generating" || createStartedRef.current) return
     createStartedRef.current = true
-    questionnaireService
-      .create()
+    const replaceId = abandonBeforeCreateRef.current
+    const abandonFirst =
+      replaceId === null
+        ? Promise.resolve()
+        : abandonActiveQuestionnaire(replaceId).then(() => {
+            abandonBeforeCreateRef.current = null
+          })
+    abandonFirst
+      .then(() => questionnaireService.create())
       .then((data) => {
         startSession(data)
         setPhase("ready")
@@ -101,19 +153,19 @@ export function QuizPage() {
             /active questionnaire/i.test(error.serverMessage ?? ""))
 
         if (hasActive) {
-          // Resume the questionnaire that is already in progress instead of failing.
+          // Ask whether to continue the questionnaire already in progress or start a new one.
           try {
-            startSession(await questionnaireService.getActive())
-            toast.info("Ya tenías un cuestionario en progreso. Puedes continuar donde lo dejaste.")
-            setPhase("questions")
+            setPendingActive(await questionnaireService.getActive())
+            setPhase("choosing")
             return
           } catch {
             // fall through to the generic error below
           }
         }
 
-        toast.error(getErrorMessage(error, "No se pudo generar el cuestionario. Intenta de nuevo."))
-        navigate(ROUTING.DASHBOARD, { replace: true })
+        // Keep the student here with a retry instead of bouncing them to the dashboard.
+        setGenerationError(getErrorMessage(error, "No se pudo generar el cuestionario. Intenta de nuevo."))
+        setPhase("error")
       })
       // Consent is single-use: returning to /cuestionario must not create another questionnaire.
       .finally(() => resetQuizIntro())
@@ -147,6 +199,52 @@ export function QuizPage() {
     if (blocker.state === "blocked") blocker.reset()
   }
 
+  // Re-runs the same creation flow (including the active-questionnaire check).
+  const handleRetryGeneration = () => {
+    setGenerationError(null)
+    createStartedRef.current = false
+    setPhase("generating")
+  }
+
+  const handleContinueActive = () => {
+    if (pendingActive) startSession(pendingActive)
+    setPendingActive(null)
+    resetQuizIntro()
+    setPhase("questions")
+  }
+
+  // Consent was already given: abandon the active questionnaire right before creating the new one.
+  // A rejection keeps the dialog open (it toasts the error) and abandons nothing else.
+  const handleStartNew = async () => {
+    const activeId = pendingActive?.id ?? localQuestionnaireId
+    if (activeId !== null) await abandonActiveQuestionnaire(activeId)
+    setPendingActive(null)
+    createStartedRef.current = false
+    setPhase("generating")
+  }
+
+  const handleChoiceDismissed = () => {
+    resetQuizIntro()
+    navigate(ROUTING.DASHBOARD, { replace: true })
+  }
+
+  // The questionnaire is not abandoned: it stays active server-side and the local copy is kept.
+  const performLogout = async () => {
+    setLoggingOut(true)
+    loggingOutRef.current = true
+    try {
+      await logout({ keepQuiz: true })
+    } catch {
+      // The local session is cleared even if the logout request fails.
+    }
+    navigate(ROUTING.LOGIN, { replace: true })
+  }
+
+  const handleLogoutClick = () => {
+    if (phase === "questions") setLogoutConfirmOpen(true)
+    else void performLogout()
+  }
+
   const handleComplete = (result: QuizCompletionResult) => {
     clearSession()
     resetQuizIntro()
@@ -169,16 +267,28 @@ export function QuizPage() {
     <div className="relative flex min-h-svh flex-col bg-mathe-surface">
       <header className="flex h-20 shrink-0 items-center justify-between px-6 tablet:px-10 bg-mathe-white border-b border-mathe-border">
         <MatheLogo width={108} height={48} />
-        {phase === "questions" && (
+        <div className="flex items-center gap-1 tablet:gap-2">
+          {phase === "questions" && (
+            <button
+              type="button"
+              onClick={() => setManualAbandon(true)}
+              className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
+            >
+              <X className="size-4" />
+              Abandonar
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => setManualAbandon(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink"
+            onClick={handleLogoutClick}
+            disabled={loggingOut}
+            aria-label="Cerrar sesión"
+            className="inline-flex h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold text-mathe-muted transition-colors hover:bg-mathe-white hover:text-mathe-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <X className="size-4" />
-            Abandonar
+            {loggingOut ? <Loader2 className="size-4 animate-spin" /> : <LogOut className="size-4" />}
+            <span className="hidden tablet:inline">Cerrar sesión</span>
           </button>
-        )}
+        </div>
       </header>
 
       <main
@@ -192,15 +302,65 @@ export function QuizPage() {
       >
         {isResult && quizResult ? (
           <ResultSummary result={quizResult} />
-        ) : phase === "questions" ? (
+        ) : phase === "choosing" ? null : phase === "questions" ? (
           <QuizRunner onComplete={handleComplete} onAbandoned={handleAbandonedRemotely} />
         ) : (
           <GeneratingQuiz
             ready={phase === "ready"}
+            error={phase === "error" ? generationError : null}
             onContinue={() => setPhase("questions")}
+            onRetry={handleRetryGeneration}
           />
         )}
       </main>
+
+      <ActiveQuestionnaireDialog
+        open={phase === "choosing"}
+        onContinue={handleContinueActive}
+        onStartNew={handleStartNew}
+        onDismiss={handleChoiceDismissed}
+      />
+
+      <Dialog
+        open={logoutConfirmOpen}
+        onOpenChange={(next) => {
+          if (!loggingOut) setLogoutConfirmOpen(next)
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-7">
+          <DialogHeader className="pr-6">
+            <DialogTitle>¿Cerrar sesión?</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              Tienes un cuestionario en curso. No se abandonará: podrás continuarlo
+              cuando vuelvas a iniciar sesión.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLogoutConfirmOpen(false)}
+              disabled={loggingOut}
+              className="h-11 rounded-pill px-6 font-semibold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void performLogout()}
+              disabled={loggingOut}
+              className="h-11 rounded-pill bg-mathe-blue px-6 font-semibold hover:bg-mathe-blue-deep"
+            >
+              {loggingOut ? (
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+              ) : (
+                <LogOut data-icon="inline-start" />
+              )}
+              Cerrar sesión
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isAbandonVisible && (
         <AbandonDialog

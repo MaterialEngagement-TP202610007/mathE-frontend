@@ -33,7 +33,8 @@ import {
   type School,
 } from "@/shared/services/school.service"
 import { authService } from "@/features/auth/services/auth.service"
-import { PHONE_ERROR_MESSAGE, PHONE_REGEX } from "@/features/auth/schemas/auth.schema"
+import { profileTextSchema } from "@/features/users/schemas/profile.schema"
+import { toFieldErrors } from "@/lib/form"
 import { getErrorMessage } from "@/lib/http"
 
 // ── Animations ───────────────────────────────────────────────────────────────
@@ -125,13 +126,20 @@ function SkeletonInfoRow() {
 
 // ── Form field wrapper ────────────────────────────────────────────────────────
 
+/** Id of a field's inline error message, referenced by the input's `aria-describedby`. */
+function errorId(id: string) {
+  return `${id}-error`
+}
+
 function FormField({
   id,
   label,
+  error,
   children,
 }: {
   id?: string
   label: string
+  error?: string
   children: React.ReactNode
 }) {
   return (
@@ -143,6 +151,11 @@ function FormField({
         {label}
       </Label>
       {children}
+      {error && id && (
+        <p id={errorId(id)} className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
@@ -167,7 +180,7 @@ export function ProfilePage() {
   const [editGradeId, setEditGradeId] = useState<number | null>(null)
   const [editSchoolId, setEditSchoolId] = useState<number | null>(null)
   const [editSchoolName, setEditSchoolName] = useState("")
-  const [schoolError, setSchoolError] = useState("")
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Students and teachers must always belong to a school (the backend rejects clearing it).
   const requiresSchool = roleId === ROLE.STUDENT || roleId === ROLE.TEACHER
@@ -192,33 +205,51 @@ export function ProfilePage() {
     setEditGradeId(user.academicGradeId)
     setEditSchoolId(user.school?.id ?? null)
     setEditSchoolName(school ? formatSchoolLabel(school) : (user.school?.name ?? ""))
-    setSchoolError("")
+    setFieldErrors({})
     setIsEditing(true)
+  }
+
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
   }
 
   async function handleSave() {
     if (!user) return
 
-    if (requiresSchool && editSchoolId === null) {
-      setSchoolError("Selecciona tu colegio")
+    const parsed = profileTextSchema.safeParse({
+      name: editName,
+      birthDate: editBirthDate,
+      phoneNumber: editPhone,
+    })
+    const errors: Record<string, string> = parsed.success ? {} : toFieldErrors(parsed.error)
+    const trimName = editName.trim()
+    const trimPhone = editPhone.trim()
+    // Unchanged stored values that predate these rules must not block saving other fields.
+    if (trimName && trimName === user.name) delete errors.name
+    if (trimPhone === (user.phoneNumber ?? "")) delete errors.phoneNumber
+    // A stored birth date can be changed but not cleared.
+    if (!editBirthDate && user.birthDate && !errors.birthDate)
+      errors.birthDate = "La fecha de nacimiento es obligatoria"
+    if (requiresSchool && editSchoolId === null) errors.schoolId = "Selecciona tu colegio"
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       return
     }
+    setFieldErrors({})
 
     const payload: UpdateProfilePayload = {}
 
-    const trimName = editName.trim()
-    if (trimName && trimName !== user.name) payload.name = trimName
+    if (trimName !== user.name) payload.name = trimName
     if (editBirthDate && editBirthDate !== toDateInputValue(user.birthDate))
       payload.birthDate = editBirthDate
-    const trimPhone = editPhone.trim()
-    if (trimPhone !== (user.phoneNumber ?? "")) {
-      if (trimPhone && !PHONE_REGEX.test(trimPhone)) {
-        toast.error(PHONE_ERROR_MESSAGE)
-        return
-      }
-      // An empty field clears the stored phone (the backend accepts null).
-      payload.phoneNumber = trimPhone || null
-    }
+    // An empty field clears the stored phone (the backend accepts null).
+    if (trimPhone !== (user.phoneNumber ?? "")) payload.phoneNumber = trimPhone || null
     if (editGradeId !== user.academicGradeId)
       payload.academicGradeId = editGradeId ?? undefined
     // A school can be changed but never cleared.
@@ -332,31 +363,48 @@ export function ProfilePage() {
             </div>
 
             <div className="grid gap-5 tablet:grid-cols-2">
-              <FormField id="edit-name" label="Nombre completo">
+              <FormField id="edit-name" label="Nombre completo" error={fieldErrors.name}>
                 <Input
                   id="edit-name"
                   value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  onChange={(e) => {
+                    setEditName(e.target.value)
+                    clearFieldError("name")
+                  }}
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? errorId("edit-name") : undefined}
                   placeholder="Tu nombre completo"
                   className="h-11 rounded-pill"
                 />
               </FormField>
 
-              <FormField id="edit-birth" label="Fecha de nacimiento">
+              <FormField id="edit-birth" label="Fecha de nacimiento" error={fieldErrors.birthDate}>
                 <Input
                   id="edit-birth"
                   type="date"
                   value={editBirthDate}
-                  onChange={(e) => setEditBirthDate(e.target.value)}
+                  onChange={(e) => {
+                    setEditBirthDate(e.target.value)
+                    clearFieldError("birthDate")
+                  }}
+                  aria-invalid={Boolean(fieldErrors.birthDate)}
+                  aria-describedby={fieldErrors.birthDate ? errorId("edit-birth") : undefined}
                   className="h-11 rounded-pill"
                 />
               </FormField>
 
-              <FormField id="edit-phone" label="Teléfono">
+              <FormField id="edit-phone" label="Teléfono" error={fieldErrors.phoneNumber}>
                 <Input
                   id="edit-phone"
+                  type="tel"
+                  inputMode="tel"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(e) => {
+                    setEditPhone(e.target.value)
+                    clearFieldError("phoneNumber")
+                  }}
+                  aria-invalid={Boolean(fieldErrors.phoneNumber)}
+                  aria-describedby={fieldErrors.phoneNumber ? errorId("edit-phone") : undefined}
                   placeholder="+51999999999"
                   className="h-11 rounded-pill"
                 />
@@ -391,9 +439,9 @@ export function ProfilePage() {
                   onSelect={(s) => {
                     setEditSchoolId(s.id)
                     setEditSchoolName(formatSchoolLabel(s))
-                    setSchoolError("")
+                    clearFieldError("schoolId")
                   }}
-                  error={schoolError}
+                  error={fieldErrors.schoolId}
                 />
               </div>
             </div>

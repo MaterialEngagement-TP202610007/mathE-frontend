@@ -26,6 +26,14 @@ The server enables CORS with `credentials: true`, origin from env `CORS_ORIGIN` 
 
 Cookie flags: `HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/`. `Secure` works on `http://localhost` in Chrome/Firefox (localhost is a secure context). For a non-localhost dev host over plain HTTP, the cookie won't be sent — use HTTPS or localhost.
 
+### Frontend environment variables
+Read through `src/config/env.config.ts` (`ENV`); never access `import.meta.env` directly.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | no | Backend host, no `/api` suffix. Keep **unset** on Netlify (`/api/*` is proxied same-origin). |
+| `VITE_SUPPORT_EMAIL` | no | Support address for the "Contactar soporte" link on error screens (`ErrorPanel`) and the quiz submit-failure toast (HU-54). When unset, the link is hidden; no address is invented. Frontend-only, no backend change. |
+
 ---
 
 ## 2. Roles & RBAC
@@ -439,7 +447,7 @@ Returns `Paginated<Result>`. Invalid date strings return `400 { "error": "Invali
 | `schoolId` | integer | Filter by school |
 | `classifierType` | string | Filter by classifier, e.g. `xgboost` |
 
-`correct-label` body: `{ "vakLabel": "Visual" | "Auditory" | "Kinesthetic" }`. Sets `correctedVakLabel` on the result and marks the matching ML dataset row `labelSource=teacher_validated`.
+`correct-label` body: `{ "vakLabel": "Visual" | "Auditory" | "Kinesthetic" }`. Sets `correctedVakLabel` on the result and marks the matching ML dataset row `labelSource=teacher_validated`. Errors: `400 { "error": "Missing vakLabel" | "vakLabel must be one of: ..." | "Invalid result id" }`, `404 Result not found`. Returns the result entity, which on the deployed backend does **not** include `correctedVakLabel` (nor does `GET /:id`), so the frontend treats `correctedVakLabel` / `correctedAt` as optional (`undefined` = unknown).
 
 ### Notifications — `/api/notifications` (all 🔑, Student only)
 | Method | Path | Returns |
@@ -535,6 +543,15 @@ Only **approved** questions are eligible to appear in student questionnaires (wi
    → updates the ML dataset row to teacher_validated for future retraining.
 4. Inspect training data: GET /api/ml-dataset?labelSource=teacher_validated
 ```
+
+Frontend (HU-44): `ResultDetailPage` renders `LabelCorrectionPanel` for teachers only (admins cannot open
+the route; students never see it). It shows the predicted label, the corrected label when the response
+carries `correctedVakLabel`, and "Corregido el {fecha}" only when `correctedAt` is present. "Guardar
+corrección" is disabled while saving and when the selection equals the current effective label
+(`correctedVakLabel ?? predominantStyle`), and opens a confirmation dialog before calling
+`resultService.correctLabel`. On success the page keeps the submitted label in place (the deployed
+response does not echo it) and shows a toast; on error the backend message is shown inline and the
+panel stays usable. A reload shows no previous correction until the backend returns `correctedVakLabel`.
 
 ---
 

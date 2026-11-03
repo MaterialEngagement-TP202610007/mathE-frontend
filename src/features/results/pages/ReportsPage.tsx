@@ -89,7 +89,29 @@ const LEGEND_ITEMS = [
 
 const RESULTS_PAGE_SIZE = 10;
 
+const NO_GRADE_DATA_MESSAGE = "No hay datos para este grado";
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Chart level ("Primaria" | "Secundaria") that contains the given academic grade. */
+function levelOfGrade(gradeId: number): Level | null {
+  const grade = ACADEMIC_GRADES.find((g) => g.id === gradeId);
+  if (!grade) return null;
+  return grade.level === "primaria" ? "Primaria" : "Secundaria";
+}
+
+/**
+ * A grade has chart data only when someone was evaluated. The backend sends
+ * `evaluatedStudents: 0` and `null` averages otherwise; those must never be drawn as 0% bars.
+ */
+function hasGradeData(g: GradeStats): boolean {
+  if (g.evaluatedStudents === 0) return false;
+  return (
+    g.avgVisualProbability !== null ||
+    g.avgAuditoryProbability !== null ||
+    g.avgKinestheticProbability !== null
+  );
+}
 
 function gradeLabel(
   gradeId: number | null | undefined,
@@ -403,7 +425,7 @@ export function ReportsPage() {
   const [resultsLoading, setResultsLoading] = useState(true);
 
   // Filters
-  const [filterGrade] = useState<string>("all");
+  const [filterGrade, setFilterGrade] = useState<string>("all");
   const [filterClassifier, setFilterClassifier] = useState<string>("all");
 
   // Student map (id → User) for name/grade lookup
@@ -488,15 +510,38 @@ export function ReportsPage() {
     };
   }
 
-  const chartData = gradeData.map((g) => ({
-    grade: gradeLabel(g.gradeId, g.gradeName),
-    Visual: g.avgVisualProbability,
-    Auditory: g.avgAuditoryProbability,
-    Kinesthetic: g.avgKinestheticProbability,
-  }));
-  const hasChartData = chartData.some(
-    (d) => d.Visual > 0 || d.Auditory > 0 || d.Kinesthetic > 0,
-  );
+  // The grade filter drives both the results table (server-side `gradeId`) and the chart
+  // (client-side, from the by-grade stats already loaded). Selecting a grade moves the chart
+  // to that grade's level so its stats are present in `gradeData`.
+  function handleGradeChange(value: string) {
+    setFilterGrade(value);
+    setResultsPage(1);
+    if (value === "all") return;
+    const gradeLevel = levelOfGrade(Number(value));
+    if (gradeLevel && gradeLevel !== level) setLevel(gradeLevel);
+  }
+
+  // Switching to the other level drops a grade selection that no longer belongs to it,
+  // so the chart and the table never show different scopes.
+  function handleLevelChange(value: Level) {
+    setLevel(value);
+    if (filterGrade !== "all" && levelOfGrade(Number(filterGrade)) !== value) {
+      setFilterGrade("all");
+      setResultsPage(1);
+    }
+  }
+
+  const selectedGradeId = filterGrade !== "all" ? Number(filterGrade) : null;
+  const chartData = gradeData
+    .filter((g) => selectedGradeId === null || g.gradeId === selectedGradeId)
+    .filter(hasGradeData)
+    .map((g) => ({
+      grade: gradeLabel(g.gradeId, g.gradeName),
+      Visual: g.avgVisualProbability,
+      Auditory: g.avgAuditoryProbability,
+      Kinesthetic: g.avgKinestheticProbability,
+    }));
+  const hasChartData = chartData.length > 0;
 
   const commonStyle = stats?.mostCommonStyle ?? null;
   const commonStyleLabel = commonStyle
@@ -632,7 +677,7 @@ export function ReportsPage() {
               </p>
             </div>
           </div>
-          <Select value={level} onValueChange={(v) => setLevel(v as Level)}>
+          <Select value={level} onValueChange={(v) => handleLevelChange(v as Level)}>
             <SelectTrigger className="h-9 w-36 rounded-pill text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -676,10 +721,14 @@ export function ReportsPage() {
             </span>
             <div>
               <p className="font-semibold text-mathe-ink">
-                Sin datos para {level}
+                {selectedGradeId !== null
+                  ? NO_GRADE_DATA_MESSAGE
+                  : `Sin datos para ${level}`}
               </p>
               <p className="mt-0.5 text-sm text-mathe-muted">
-                Aún no hay evaluaciones completadas en este nivel educativo
+                {selectedGradeId !== null
+                  ? `Aún no hay evaluaciones completadas en ${gradeLabel(selectedGradeId)}`
+                  : "Aún no hay evaluaciones completadas en este nivel educativo"}
               </p>
             </div>
           </div>
@@ -769,23 +818,23 @@ export function ReportsPage() {
               Todos los estudiantes con evaluaciones completadas
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {/* <Select
-              value={filterGrade}
-              onValueChange={handleFilterChange(setFilterGrade)}
-            >
-              <SelectTrigger className="h-9 w-44 rounded-pill text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={filterGrade} onValueChange={handleGradeChange}>
+              <SelectTrigger
+                aria-label="Filtrar por grado"
+                className="h-9 w-44 rounded-pill text-xs"
+              >
                 <SelectValue placeholder="Todos los grados" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los grados</SelectItem>
                 {ACADEMIC_GRADES.map((g) => (
                   <SelectItem key={g.id} value={String(g.id)}>
-                    {g.name}
+                    {gradeLabel(g.id)}
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select> */}
+            </Select>
             <Select
               value={filterClassifier}
               onValueChange={handleFilterChange(setFilterClassifier)}
@@ -832,9 +881,15 @@ export function ReportsPage() {
                 <ClipboardList className="size-7 text-mathe-muted" />
               </span>
               <div>
-                <p className="font-semibold text-mathe-ink">Sin resultados</p>
+                <p className="font-semibold text-mathe-ink">
+                  {selectedGradeId !== null && filterClassifier === "all"
+                    ? NO_GRADE_DATA_MESSAGE
+                    : "Sin resultados"}
+                </p>
                 <p className="mt-1 text-sm text-mathe-muted">
-                  {filterGrade !== "all" || filterClassifier !== "all"
+                  {selectedGradeId !== null && filterClassifier === "all"
+                    ? `Aún no hay evaluaciones completadas en ${gradeLabel(selectedGradeId)}`
+                    : filterGrade !== "all" || filterClassifier !== "all"
                     ? "Prueba ajustando los filtros"
                     : "Aún no hay evaluaciones completadas en tu institución"}
                 </p>

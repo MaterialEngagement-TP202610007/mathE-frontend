@@ -9,10 +9,12 @@ import { AccountTypeTabs } from "../components/AccountTypeTabs"
 import { AuthLayout } from "../components/AuthLayout"
 import { FormField } from "../components/FormField"
 import { useLogin } from "../hooks/use-login"
+import { useAuthStore } from "../store/auth.store"
 import { loginSchema } from "../schemas/auth.schema"
 
 export function LoginPage() {
   const { login, isLoading, error } = useLogin()
+  const loggedOutForInactivity = useAuthStore((s) => s.logoutReason === "idle")
   const [searchParams, setSearchParams] = useSearchParams()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -53,6 +55,15 @@ export function LoginPage() {
     >
       <form onSubmit={onSubmit} className="grid gap-5" noValidate>
         <AccountTypeTabs value={accountType} onChange={onAccountChange} />
+
+        {loggedOutForInactivity && !error && (
+          <p
+            role="status"
+            className="rounded-xl border border-mathe-blue/30 bg-mathe-surface px-4 py-3 text-sm text-mathe-ink"
+          >
+            Tu sesión se cerró por inactividad.
+          </p>
+        )}
 
         {error && (
           <p
