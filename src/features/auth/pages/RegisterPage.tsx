@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { ArrowRight, CircleCheck, MailCheck } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -25,6 +25,7 @@ import { FormField } from "../components/FormField";
 import { GradeSelect } from "../components/GradeSelect";
 import { LegalDialog } from "../components/LegalDialog";
 import { SchoolSearchBox } from "../components/SchoolSearchBox";
+import { verifyEmailPath } from "../utils/email-verification";
 import { useRegister } from "../hooks/use-register";
 import { LEGAL } from "../data/legal-content";
 import {
@@ -48,7 +49,7 @@ const EMPTY_FORM = {
 };
 
 export function RegisterPage() {
-  const { register, isLoading, error, isSuccess } = useRegister();
+  const { register, isLoading, error, isSuccess, response } = useRegister();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const accountType: AccountType =
@@ -267,8 +268,19 @@ export function RegisterPage() {
         </Button>
       </form>
 
+      {/* TP2 CP019: with email verification on, the next step is entering the code. */}
+      {isSuccess && response?.emailVerificationRequired && (
+        <Navigate
+          to={verifyEmailPath(form.email.trim(), {
+            sent: response.verificationEmailSent !== false,
+            role: accountType,
+          })}
+          replace
+        />
+      )}
+
       <Dialog
-        open={isSuccess}
+        open={isSuccess && !response?.emailVerificationRequired}
         onOpenChange={(open) => {
           if (!open) goToLogin();
         }}

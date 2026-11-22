@@ -52,6 +52,32 @@ const KNOWN_SERVER_MESSAGES: { match: string; message: string }[] = [
   { match: "invalid session", message: "Tu sesión no es válida. Inicia sesión nuevamente." },
   { match: "email already registered", message: "Este correo ya está registrado." },
   { match: "invalid name", message: "Ingresa tu nombre y apellido (solo letras)." },
+  {
+    match: "email not verified",
+    message: "Debes verificar tu correo. Ingresa el código que te enviamos.",
+  },
+  { match: "invalid verification code format", message: "El código debe tener 6 dígitos." },
+  {
+    match: "invalid or expired verification code",
+    message: "El código es incorrecto o ya venció. Revísalo o solicita uno nuevo.",
+  },
+  {
+    match: "too many failed attempts",
+    message: "Demasiados intentos fallidos. Solicita un código nuevo.",
+  },
+  {
+    match: "please wait",
+    message: "Espera un minuto antes de solicitar otro código.",
+  },
+  {
+    match: "too many verification attempts",
+    message: "Demasiados intentos de verificación. Intenta de nuevo en 15 minutos.",
+  },
+  {
+    match: "too many verification code requests",
+    message: "Solicitaste demasiados códigos. Intenta de nuevo en 15 minutos.",
+  },
+  { match: "email verification is disabled", message: "La verificación de correo no está activa." },
   { match: "invalid birth date", message: "La fecha de nacimiento no es válida." },
   {
     match: "birth date out of range for a student",

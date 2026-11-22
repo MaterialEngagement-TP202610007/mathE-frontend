@@ -1,18 +1,19 @@
 import { useState } from "react"
 import { HttpError } from "@/lib/http"
-import type { RegisterPayload } from "../interfaces/auth.interface"
+import type { RegisterPayload, RegisterResponse } from "../interfaces/auth.interface"
 import { authService } from "../services/auth.service"
 
 export function useRegister() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [response, setResponse] = useState<RegisterResponse | null>(null)
 
   const register = async (payload: RegisterPayload) => {
     setIsLoading(true)
     setError(null)
     try {
-      await authService.register(payload)
+      setResponse(await authService.register(payload))
       setIsSuccess(true)
     } catch (e) {
       setError(
@@ -25,5 +26,5 @@ export function useRegister() {
     }
   }
 
-  return { register, isLoading, error, isSuccess }
+  return { register, isLoading, error, isSuccess, response }
 }

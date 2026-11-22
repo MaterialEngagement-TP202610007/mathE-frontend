@@ -26,6 +26,15 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface RegisterResponse {
+  message: string
+  requiresApproval: boolean
+  /** True when the backend has email verification on: the user must enter a code. */
+  emailVerificationRequired?: boolean
+  /** False when the code email could not be sent; the user can ask for a new one. */
+  verificationEmailSent?: boolean
+}
+
 export interface RegisterPayload {
   email: string
   password: string

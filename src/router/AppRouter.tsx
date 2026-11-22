@@ -7,6 +7,7 @@ import { AppSplash } from "@/shared/components/AppSplash"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { RegisterPendingPage } from "@/features/auth/pages/RegisterPendingPage"
+import { VerifyEmailPage } from "@/features/auth/pages/VerifyEmailPage"
 import { authService } from "@/features/auth/services/auth.service"
 import { useAuthStore } from "@/features/auth/store/auth.store"
 import { DashboardLayout } from "@/features/dashboard/components/DashboardLayout"
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
           { path: ROUTING.LOGIN, element: <LoginPage /> },
           { path: ROUTING.REGISTER, element: <RegisterPage /> },
           { path: ROUTING.REGISTER_PENDING, element: <RegisterPendingPage /> },
+          { path: ROUTING.VERIFY_EMAIL, element: <VerifyEmailPage /> },
         ],
       },
       {
@@ -121,6 +123,7 @@ const PUBLIC_PATHS: ReadonlySet<string> = new Set([
   ROUTING.LOGIN,
   ROUTING.REGISTER,
   ROUTING.REGISTER_PENDING,
+  ROUTING.VERIFY_EMAIL,
 ])
 
 /** Total time spent retrying `/auth/me` while the backend wakes up (cold start ≈ 50 s). */

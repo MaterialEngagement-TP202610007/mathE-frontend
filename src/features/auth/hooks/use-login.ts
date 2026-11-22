@@ -5,6 +5,7 @@ import { HttpError } from "@/lib/http"
 import type { LoginCredentials } from "../interfaces/auth.interface"
 import { authService } from "../services/auth.service"
 import { useAuthStore } from "../store/auth.store"
+import { isEmailNotVerifiedError, verifyEmailPath } from "../utils/email-verification"
 
 export function useLogin() {
   const navigate = useNavigate()
@@ -20,6 +21,10 @@ export function useLogin() {
       setSession(user)
       navigate(ROUTING.DASHBOARD, { replace: true })
     } catch (e) {
+      if (isEmailNotVerifiedError(e)) {
+        navigate(verifyEmailPath(credentials.email), { replace: true })
+        return
+      }
       // 401 here usually means bad credentials OR a teacher account pending admin approval.
       setError(
         e instanceof HttpError

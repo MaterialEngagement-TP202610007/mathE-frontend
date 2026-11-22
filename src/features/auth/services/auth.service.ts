@@ -5,6 +5,7 @@ import type {
   LoginResponse,
   MeResponse,
   RegisterPayload,
+  RegisterResponse,
 } from "../interfaces/auth.interface"
 
 export const authService = {
@@ -17,11 +18,19 @@ export const authService = {
   },
 
   register: async (payload: RegisterPayload) => {
-    const { data } = await api.post<{ message: string }>(
+    const { data } = await api.post<RegisterResponse>(
       ENDPOINT_SERVER.AUTH_REGISTER,
       payload,
     )
     return data;
+  },
+
+  verifyEmail: async (email: string, code: string) => {
+    await api.post(ENDPOINT_SERVER.AUTH_VERIFY_EMAIL, { email, code })
+  },
+
+  resendVerificationCode: async (email: string) => {
+    await api.post(ENDPOINT_SERVER.AUTH_VERIFY_EMAIL_RESEND, { email })
   },
 
   logout: async () => {
