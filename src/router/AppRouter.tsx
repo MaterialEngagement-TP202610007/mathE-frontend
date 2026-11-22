@@ -194,10 +194,13 @@ export function AppRouter() {
   if (boot === "loading") return <AppSplash />
   if (boot === "unreachable") return <AppSplash onRetry={start} />
 
+  // The Toaster goes first so it subscribes before route effects run: a toast
+  // fired while the first route mounts (e.g. the role redirect on a direct URL)
+  // would otherwise be dropped.
   return (
     <>
-      <RouterProvider router={router} />
       <Toaster position="top-center" />
+      <RouterProvider router={router} />
     </>
   )
 }
