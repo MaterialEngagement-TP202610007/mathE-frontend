@@ -1,4 +1,6 @@
+import { useEffect } from "react"
 import { Navigate, Outlet, useParams } from "react-router"
+import { toast } from "sonner"
 import { ROLE, ROUTING } from "@/config/constant.config"
 import { useAuthStore } from "@/features/auth/store/auth.store"
 
@@ -24,7 +26,7 @@ export function ProtectedRoute({ allowedRoles, studentOwnParam }: ProtectedRoute
   // Wrong role: back to the dashboard index, which every role may open (it renders the
   // role's home, or sends admins to teacher approval), so this can never loop.
   if (allowedRoles && (roleId === null || !allowedRoles.includes(roleId))) {
-    return <Navigate to={ROUTING.DASHBOARD} replace />
+    return <RoleRedirect />
   }
 
   if (
@@ -36,4 +38,19 @@ export function ProtectedRoute({ allowedRoles, studentOwnParam }: ProtectedRoute
   }
 
   return <Outlet />
+}
+
+const ROLE_REDIRECT_TOAST_ID = "role-redirect"
+
+/**
+ * Explains why the user lands on their own panel (TP2 CP030): the screen they
+ * opened belongs to another role. The fixed toast id avoids duplicates.
+ */
+function RoleRedirect() {
+  useEffect(() => {
+    toast.info("Esa sección no está disponible para tu tipo de cuenta. Te llevamos a tu panel.", {
+      id: ROLE_REDIRECT_TOAST_ID,
+    })
+  }, [])
+  return <Navigate to={ROUTING.DASHBOARD} replace />
 }

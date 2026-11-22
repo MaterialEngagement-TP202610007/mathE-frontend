@@ -27,7 +27,11 @@ import { LegalDialog } from "../components/LegalDialog";
 import { SchoolSearchBox } from "../components/SchoolSearchBox";
 import { useRegister } from "../hooks/use-register";
 import { LEGAL } from "../data/legal-content";
-import { registerTextSchema } from "../schemas/auth.schema";
+import {
+  AGE_RANGE,
+  birthDateRangeError,
+  registerTextSchema,
+} from "../schemas/auth.schema";
 import type { RegisterPayload } from "../interfaces/auth.interface";
 
 const EMPTY_FORM = {
@@ -73,6 +77,10 @@ export function RegisterPage() {
       ? {}
       : toFieldErrors(parsed.error);
 
+    if (!errors.birthDate && form.birthDate) {
+      const ageError = birthDateRangeError(form.birthDate, accountType);
+      if (ageError) errors.birthDate = ageError;
+    }
     if (form.schoolId === null) errors.schoolId = "Selecciona tu colegio";
     if (isStudent && form.academicGradeId === null)
       errors.academicGradeId = "Selecciona tu grado académico";
@@ -174,6 +182,8 @@ export function RegisterPage() {
           value={form.birthDate}
           onChange={(v) => set("birthDate", v)}
           error={fieldErrors.birthDate}
+          minAge={AGE_RANGE[accountType].min}
+          maxAge={AGE_RANGE[accountType].max}
         />
         <FormField
           label="Teléfono (opcional)"

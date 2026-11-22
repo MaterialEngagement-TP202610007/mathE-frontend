@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { format, parse } from "date-fns"
+import { addDays, format, parse, subYears } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 
@@ -18,6 +18,10 @@ interface DateFieldProps {
   value: string
   onChange: (value: string) => void
   error?: string
+  /** Youngest accepted age: later birth dates are disabled in the calendar. */
+  minAge?: number
+  /** Oldest accepted age: earlier birth dates are disabled in the calendar. */
+  maxAge?: number
 }
 
 const STORAGE_FORMAT = "yyyy-MM-dd"
@@ -29,9 +33,13 @@ function parseValue(value: string): Date | undefined {
 }
 
 /** Date picker built on the shadcn Calendar + Popover. */
-export function DateField({ label, name, value, onChange, error }: DateFieldProps) {
+export function DateField({ label, name, value, onChange, error, minAge, maxAge }: DateFieldProps) {
   const [open, setOpen] = useState(false)
   const selected = parseValue(value)
+  const today = new Date()
+  const latest = minAge === undefined ? today : subYears(today, minAge)
+  // Born one day after the date `maxAge + 1` years ago is still `maxAge` years old.
+  const earliest = maxAge === undefined ? new Date(1950, 0, 1) : addDays(subYears(today, maxAge + 1), 1)
 
   return (
     <div className="grid gap-2">
@@ -60,11 +68,11 @@ export function DateField({ label, name, value, onChange, error }: DateFieldProp
             mode="single"
             locale={es}
             captionLayout="dropdown"
-            startMonth={new Date(1950, 0)}
-            endMonth={new Date()}
-            defaultMonth={selected ?? new Date(2010, 0)}
+            startMonth={earliest}
+            endMonth={latest}
+            defaultMonth={selected ?? latest}
             selected={selected}
-            disabled={{ after: new Date() }}
+            disabled={[{ after: latest }, { before: earliest }]}
             onSelect={(date) => {
               if (date) onChange(format(date, STORAGE_FORMAT))
               setOpen(false)

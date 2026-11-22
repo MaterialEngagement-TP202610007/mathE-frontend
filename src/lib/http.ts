@@ -51,6 +51,16 @@ const KNOWN_SERVER_MESSAGES: { match: string; message: string }[] = [
   { match: "user is already active", message: "Esta cuenta ya está activa." },
   { match: "invalid session", message: "Tu sesión no es válida. Inicia sesión nuevamente." },
   { match: "email already registered", message: "Este correo ya está registrado." },
+  { match: "invalid name", message: "Ingresa tu nombre y apellido (solo letras)." },
+  { match: "invalid birth date", message: "La fecha de nacimiento no es válida." },
+  {
+    match: "birth date out of range for a student",
+    message: "La edad de un estudiante debe estar entre 5 y 20 años.",
+  },
+  {
+    match: "birth date out of range for a teacher",
+    message: "La edad de un profesor debe estar entre 18 y 100 años.",
+  },
   {
     match: "you already have an active questionnaire",
     message: "Ya tienes un cuestionario en progreso.",
